@@ -4,6 +4,7 @@ import {
   MessageSquare,
   Globe,
   Settings as SettingsIcon,
+  Trophy,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -11,7 +12,8 @@ import { useAuth } from "../../context/AuthContext";
 import Terminal from "../apps/Terminal";
 import Messenger from "../apps/Messenger";
 import Browser from "../apps/Browser";
-import Settings from "../apps/Settings"; // <-- Imported!
+import Settings from "../apps/Settings";
+import Leaderboard from "../apps/Leaderboard";
 
 // Configuration
 const WALLPAPER_URL =
@@ -42,6 +44,13 @@ export default function Desktop() {
       icon: Globe,
       color: "bg-orange-500 text-white",
       component: Browser,
+    },
+    {
+      id: "leaderboard",
+      name: "Rankings",
+      icon: Trophy,
+      color: "bg-yellow-600 text-white",
+      component: Leaderboard,
     },
     {
       id: "settings",
