@@ -3,8 +3,7 @@ import {
   Terminal as TerminalIcon,
   MessageSquare,
   Globe,
-  Settings,
-  LogOut,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -12,11 +11,16 @@ import { useAuth } from "../../context/AuthContext";
 import Terminal from "../apps/Terminal";
 import Messenger from "../apps/Messenger";
 import Browser from "../apps/Browser";
+import Settings from "../apps/Settings"; // <-- Imported!
+
+// Configuration
+const WALLPAPER_URL =
+  "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop";
 
 export default function Desktop() {
-  const { logout, user } = useAuth();
   const [activeApp, setActiveApp] = useState(null);
 
+  // App Definition
   const apps = [
     {
       id: "terminal",
@@ -42,54 +46,44 @@ export default function Desktop() {
     {
       id: "settings",
       name: "System",
-      icon: Settings,
+      icon: SettingsIcon,
       color: "bg-neutral-700 text-white",
-      component: null,
-    }, // Placeholder
+      component: Settings,
+    },
   ];
 
-  const handleOpenApp = (app) => {
-    if (app.id === "settings") return; // Do nothing for now
-    setActiveApp(app);
-  };
-
   return (
-    <div className="h-full relative bg-[url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+    <div
+      className="h-full relative bg-cover bg-center transition-all duration-500"
+      style={{ backgroundImage: `url(${WALLPAPER_URL})` }}
+    >
       {/* Dark Overlay for readability */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
 
       {/* App Grid */}
-      <div className="relative z-10 grid grid-cols-4 gap-y-6 gap-x-2 p-4 pt-8">
+      <div className="relative z-10 grid grid-cols-4 gap-y-6 gap-x-2 p-4 pt-8 animate-in fade-in zoom-in duration-500">
         {apps.map((app) => (
           <button
             key={app.id}
-            onClick={() => handleOpenApp(app)}
+            onClick={() => setActiveApp(app)}
             className="flex flex-col items-center gap-2 group"
           >
             <div
-              className={`${app.color} w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-active:scale-95 transition-transform duration-200`}
+              className={`${app.color} w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-active:scale-95 transition-transform duration-200 border border-white/10`}
             >
               <app.icon size={24} />
             </div>
-            <span className="text-xs text-white font-medium shadow-black drop-shadow-md">
+            <span className="text-[10px] text-white/90 font-medium drop-shadow-md tracking-wide">
               {app.name}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Logout Button (Hidden in plain sight) */}
-      <button
-        onClick={logout}
-        className="absolute top-4 right-4 z-20 text-white/50 hover:text-red-400 transition-colors"
-        title="Emergency Eject"
-      >
-        <LogOut size={16} />
-      </button>
-
       {/* Active App Window (Overlay) */}
       {activeApp && (
-        <div className="absolute inset-0 z-50 bg-black animate-in slide-in-from-bottom duration-300">
+        <div className="absolute inset-0 z-50 bg-black">
+          {/* We pass the 'onClose' prop so the app can close itself */}
           <activeApp.component onClose={() => setActiveApp(null)} />
         </div>
       )}
