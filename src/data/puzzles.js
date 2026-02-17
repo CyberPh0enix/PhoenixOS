@@ -5,6 +5,8 @@ import Level04 from "../components/puzzles/Level04";
 import Level05 from "../components/puzzles/Level05";
 import Level06 from "../components/puzzles/Level06";
 
+import { level07Commands } from "../components/puzzles/Level07";
+
 export const PUZZLE_CONFIG = [
   // --- BROWSER PUZZLES (Levels 1-6) ---
   {
@@ -74,7 +76,7 @@ export const PUZZLE_CONFIG = [
     type: "terminal",
     title: "Hidden Services",
     desc: "Network Port Analysis",
-    command: "netstat",
+    commands: level07Commands,
     flagHash:
       "ef73643c56c4e933fb2ce904efc1d4569a93b2eecae9be4748ec4bdc91c4d334",
     requires: "level-06",
