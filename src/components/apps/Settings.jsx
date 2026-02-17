@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { LogOut, User, Shield, ArrowLeft } from "lucide-react";
+import LogoutConfirmation from "../os/LogoutConfirm";
 
 export default function Settings({ onClose }) {
   const { user, logout } = useAuth();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   return (
-    <div className="h-full bg-neutral-900 text-white flex flex-col font-mono animate-in slide-in-from-right duration-300">
+    <div className="h-full bg-neutral-900 text-white flex flex-col font-mono animate-in slide-in-from-right duration-300 relative">
       {/* Header */}
       <div className="p-4 border-b border-white/10 flex items-center gap-3 bg-neutral-800/50">
         <button
@@ -60,7 +63,7 @@ export default function Settings({ onClose }) {
 
         {/* Danger Zone */}
         <button
-          onClick={logout}
+          onClick={() => setShowConfirm(true)}
           className="w-full bg-red-900/20 hover:bg-red-600 hover:text-white border border-red-500/30 text-red-400 p-4 rounded-xl flex items-center justify-between group transition-all duration-300"
         >
           <span className="text-sm font-bold uppercase">Terminate Session</span>
@@ -70,6 +73,13 @@ export default function Settings({ onClose }) {
           />
         </button>
       </div>
+
+      {/* Use Modular Component */}
+      <LogoutConfirmation
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={logout}
+      />
     </div>
   );
 }

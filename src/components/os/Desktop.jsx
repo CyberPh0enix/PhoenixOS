@@ -1,101 +1,242 @@
 import { useState } from "react";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { SYSTEM_DATA, WALLPAPER_mVjq } from "../../config/build.prop";
 import {
   Terminal as TerminalIcon,
   MessageSquare,
   Globe,
   Settings as SettingsIcon,
   Trophy,
+  Cpu,
+  LogOut,
+  Square,
+  Circle,
+  Triangle,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
-// Import our Apps
+// Apps
 import Terminal from "../apps/Terminal";
 import Messenger from "../apps/Messenger";
 import Browser from "../apps/Browser";
 import Settings from "../apps/Settings";
 import Leaderboard from "../apps/Leaderboard";
-
-// Configuration
-const WALLPAPER_URL =
-  "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop";
+import LogoutConfirmation from "./LogoutConfirm";
 
 export default function Desktop() {
+  const { logout } = useAuth();
   const [activeApp, setActiveApp] = useState(null);
+  const [showLogout, setShowLogout] = useState(false);
 
-  // App Definition
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
   const apps = [
     {
       id: "terminal",
       name: "Terminal",
       icon: TerminalIcon,
-      color: "bg-black text-green-500",
+      color: "text-green-500",
       component: Terminal,
-    },
-    {
-      id: "messenger",
-      name: "Signal",
-      icon: MessageSquare,
-      color: "bg-blue-600 text-white",
-      component: Messenger,
     },
     {
       id: "browser",
       name: "Net",
       icon: Globe,
-      color: "bg-orange-500 text-white",
+      color: "text-orange-500",
       component: Browser,
+    },
+    {
+      id: "messenger",
+      name: "Signal",
+      icon: MessageSquare,
+      color: "text-blue-500",
+      component: Messenger,
     },
     {
       id: "leaderboard",
       name: "Rankings",
       icon: Trophy,
-      color: "bg-yellow-600 text-white",
+      color: "text-yellow-500",
       component: Leaderboard,
     },
     {
       id: "settings",
       name: "System",
       icon: SettingsIcon,
-      color: "bg-neutral-700 text-white",
+      color: "text-gray-400",
       component: Settings,
     },
   ];
 
   return (
     <div
-      className="h-full relative bg-cover bg-center transition-all duration-500"
-      style={{ backgroundImage: `url(${WALLPAPER_URL})` }}
+      className="fixed inset-0 w-full h-full bg-black text-white font-sans overflow-hidden"
+      style={{ background: WALLPAPER_mVjq, backgroundSize: "cover" }}
     >
-      {/* Dark Overlay for readability */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]"></div>
-
-      {/* App Grid */}
-      <div className="relative z-10 grid grid-cols-4 gap-y-6 gap-x-2 p-4 pt-8 animate-in fade-in zoom-in duration-500">
-        {apps.map((app) => (
-          <button
-            key={app.id}
-            onClick={() => setActiveApp(app)}
-            className="flex flex-col items-center gap-2 group"
-          >
-            <div
-              className={`${app.color} w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-active:scale-95 transition-transform duration-200 border border-white/10`}
-            >
-              <app.icon size={24} />
+      {/* ================= DESKTOP UI ================= */}
+      {isDesktop && (
+        <>
+          {/* Top Bar */}
+          <div className="absolute top-0 left-0 w-full h-8 bg-black/40 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 z-50 select-none">
+            <div className="flex items-center gap-4 text-xs font-bold tracking-wider">
+              <span className="flex items-center gap-1 opacity-80">
+                <Cpu size={14} /> {SYSTEM_DATA.osName}
+              </span>
+              <span className="text-white/50 hover:text-white transition-colors cursor-pointer">
+                File
+              </span>
+              <span className="text-white/50 hover:text-white transition-colors cursor-pointer">
+                Edit
+              </span>
+              <span className="text-white/50 hover:text-white transition-colors cursor-pointer">
+                View
+              </span>
             </div>
-            <span className="text-[10px] text-white/90 font-medium drop-shadow-md tracking-wide">
-              {app.name}
-            </span>
-          </button>
-        ))}
-      </div>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-green-500/80 font-mono">
+                {SYSTEM_DATA.version}
+              </span>
+              <span>
+                {new Date().toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          </div>
 
-      {/* Active App Window (Overlay) */}
+          {/* Desktop App Grid */}
+          {!activeApp && (
+            <div className="absolute top-12 left-6 grid grid-cols-1 gap-6 z-10 animate-in fade-in duration-500">
+              {apps.map((app) => (
+                <button
+                  key={app.id}
+                  onClick={() => setActiveApp(app)}
+                  className="flex flex-col items-center gap-2 group w-20"
+                >
+                  <div className="w-16 h-16 rounded-xl bg-black/20 backdrop-blur-sm border border-white/5 flex items-center justify-center shadow-lg group-hover:bg-white/10 transition-all">
+                    <app.icon size={32} className={app.color} />
+                  </div>
+                  <span className="text-xs font-medium text-shadow drop-shadow-md">
+                    {app.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* The Dock */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 h-16 px-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl flex items-center gap-3 z-50 shadow-2xl">
+            {apps.map((app) => (
+              <button
+                key={app.id}
+                onClick={() => setActiveApp(app)}
+                className="relative group p-2 rounded-xl hover:bg-white/10 transition-all hover:-translate-y-2 duration-300"
+              >
+                <div className="p-2 bg-black/20 rounded-lg">
+                  <app.icon size={24} className={app.color} />
+                </div>
+                {activeApp?.id === app.id && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
+                )}
+                <span className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/90 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity border border-white/10 pointer-events-none whitespace-nowrap">
+                  {app.name}
+                </span>
+              </button>
+            ))}
+            <div className="w-[1px] h-8 bg-white/20 mx-1"></div>
+
+            {/* LOGOUT BUTTON NOW TRIGGERS MODAL */}
+            <button
+              onClick={() => setShowLogout(true)}
+              className="p-2 hover:bg-red-500/20 rounded-xl group transition-all"
+              title="Logout"
+            >
+              <LogOut
+                size={24}
+                className="text-red-400 group-hover:text-red-200"
+              />
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ================= MOBILE UI ================= */}
+      {!isDesktop && (
+        <>
+          <div className="absolute top-0 w-full h-8 px-4 flex justify-between items-center text-xs font-mono bg-black/40 backdrop-blur-md z-50 border-b border-white/5">
+            <span>
+              {new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+            <div className="flex gap-2">
+              <span>5G</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          {!activeApp && (
+            <div className="p-6 pt-12 grid grid-cols-4 gap-4 animate-in fade-in zoom-in duration-300">
+              {apps.map((app) => (
+                <button
+                  key={app.id}
+                  onClick={() => setActiveApp(app)}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-neutral-900/90 border border-white/10 flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                    <app.icon size={24} className={app.color} />
+                  </div>
+                  <span className="text-[10px] tracking-wide opacity-80">
+                    {app.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="absolute bottom-0 w-full h-14 bg-black/80 backdrop-blur-xl border-t border-white/10 flex justify-around items-center z-50">
+            <button
+              onClick={() => setActiveApp(null)}
+              className="p-4 active:opacity-50"
+            >
+              <Triangle size={20} className="rotate-[-90deg] fill-white/20" />
+            </button>
+            <button
+              onClick={() => setActiveApp(null)}
+              className="p-4 active:opacity-50"
+            >
+              <Circle size={18} className="fill-white/20" />
+            </button>
+            <button className="p-4 active:opacity-50">
+              <Square size={16} className="fill-white/20" />
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Active App Window */}
       {activeApp && (
-        <div className="absolute inset-0 z-50 bg-black">
-          {/* We pass the 'onClose' prop so the app can close itself */}
+        <div
+          className={`absolute z-40 bg-neutral-900 shadow-2xl overflow-hidden
+          ${
+            isDesktop
+              ? "top-10 left-10 right-10 bottom-28 rounded-xl border border-white/10 animate-in zoom-in-95"
+              : "top-8 left-0 right-0 bottom-14 animate-in slide-in-from-bottom duration-300"
+          }
+        `}
+        >
           <activeApp.component onClose={() => setActiveApp(null)} />
         </div>
       )}
+
+      {/* GLOBAL LOGOUT CONFIRMATION */}
+      <LogoutConfirmation
+        isOpen={showLogout}
+        onClose={() => setShowLogout(false)}
+        onConfirm={logout}
+      />
     </div>
   );
 }
