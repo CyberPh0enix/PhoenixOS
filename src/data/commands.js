@@ -1,6 +1,15 @@
 import { supabase } from "../lib/supabase";
 import { FILE_SYSTEM, FILE_CONTENTS } from "./filesystem";
-import { encodeSecret } from "../utils/crypto";
+import { encodeSecret, decodeSecret } from "../utils/crypto";
+import { LEVEL_CONFIG } from "./config"; // Import your config
+
+// Helper to hash text (Simple SHA-256 for the browser)
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 const resolvePath = (current, target) => {
   if (target === "/") return "/";
@@ -115,39 +124,80 @@ export const SYSTEM_COMMANDS = {
   },
 
   submit: {
-    description: "Submit a capture flag",
-    execute: async (args, { addToHistory }) => {
-      if (args.length < 3) {
-        addToHistory("error", "USAGE: submit <level-id> <flag>");
+    description: "Submit a flag",
+    // 1. Destructure 'setSolvedIds' here
+    execute: async (args, { addToHistory, user, solvedIds, setSolvedIds }) => {
+      if (args.length < 2) {
+        addToHistory("error", "Usage: submit <flag_string>");
         return;
       }
-      const puzzleId = args[1];
-      const flagAttempt = args[2];
+
+      const inputFlag = args.slice(1).join(" ").trim();
+      const inputHash = await sha256(inputFlag);
 
       addToHistory("system", "Verifying hash signature...");
 
-      try {
-        const { data, error } = await supabase.rpc("submit_flag", {
-          puzzle_id_input: puzzleId,
-          flag_input: flagAttempt,
-        });
-
-        if (error) throw error;
-
-        if (data === true) {
-          addToHistory("success", "ACCESS GRANTED. Flag accepted.");
-          addToHistory(
-            "success",
-            "Points have been transferred to your profile.",
-          );
-        } else {
-          addToHistory(
-            "error",
-            "ACCESS DENIED. Invalid flag or already solved.",
-          );
+      // --- DYNAMIC CHECK START ---
+      let matchedLevel = null;
+      for (const level of LEVEL_CONFIG) {
+        if (level.encryptedFlag) {
+          const realFlag = decodeSecret(level.encryptedFlag);
+          const realHash = await sha256(realFlag);
+          if (realHash === inputHash) {
+            matchedLevel = level;
+            break;
+          }
         }
-      } catch (err) {
-        addToHistory("error", `SYSTEM ERROR: ${err.message}`);
+      }
+      // --- DYNAMIC CHECK END ---
+
+      if (matchedLevel) {
+        if (solvedIds && solvedIds.includes(matchedLevel.id)) {
+          addToHistory(
+            "warning",
+            `Level ${matchedLevel.id} is already solved.`,
+          );
+          return;
+        }
+
+        if (user) {
+          const { error } = await supabase.from("solved_puzzles").insert([
+            {
+              user_id: user.id,
+              puzzle_id: matchedLevel.id,
+              solved_at: new Date().toISOString(),
+            },
+          ]);
+
+          if (error) {
+            if (error.code === "23505") {
+              addToHistory("success", "You have already solved this level!");
+              // NO RELOAD NEEDED HERE
+            } else {
+              console.error("Supabase Error:", error);
+              addToHistory("error", `Database Error: ${error.message}`);
+            }
+          } else {
+            addToHistory(
+              "success",
+              `CORRECT! ${matchedLevel.title} Completed.`,
+            );
+            addToHistory("info", "Updating profile clearance...");
+
+            // 2. UPDATE STATE INSTANTLY (No Reload)
+            if (setSolvedIds) {
+              setSolvedIds((prev) => [...prev, matchedLevel.id]);
+            }
+          }
+        } else {
+          addToHistory("success", `CORRECT! (Guest Mode)`);
+          // Update local state for guests too so they can keep playing
+          if (setSolvedIds) {
+            setSolvedIds((prev) => [...prev, matchedLevel.id]);
+          }
+        }
+      } else {
+        addToHistory("error", "INCORRECT. Flag signature mismatch.");
       }
     },
   },

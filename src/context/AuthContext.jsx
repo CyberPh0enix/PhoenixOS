@@ -32,23 +32,15 @@ export const AuthProvider = ({ children }) => {
     supabase.auth.signInWithPassword({ email, password });
 
   const signup = async (email, password, username) => {
-    // 1. Sign up the auth user
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { username }, // Store username in metadata
+        data: { username },
       },
     });
 
     if (error) throw error;
-
-    // 2. Create the public profile (for the scoreboard)
-    if (data.user) {
-      await supabase
-        .from("profiles")
-        .insert([{ id: data.user.id, username: username }]);
-    }
 
     return { data, error };
   };

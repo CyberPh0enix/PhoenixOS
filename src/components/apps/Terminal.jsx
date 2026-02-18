@@ -1,31 +1,34 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase"; // Needed for Mission Briefing
-import { SYSTEM_DATA } from "../../config/build.prop";
+import { supabase } from "../../lib/supabase";
 import { PUZZLE_CONFIG } from "../../data/puzzles";
 import { SYSTEM_COMMANDS } from "../../data/commands";
+import { SYSTEM_DATA } from "../../config/build.prop";
+import { checkCommandLock } from "../../utils/game";
 
 export default function Terminal({ onClose }) {
   const { user } = useAuth();
 
-  // --- STATE ---
+  // STATE
   const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
   const [cwd, setCwd] = useState("/home/user");
   const [processing, setProcessing] = useState(false);
   const [crash, setCrash] = useState(false);
+  const [solvedIds, setSolvedIds] = useState([]); // Track Progress
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
   if (crash) throw new Error("MANUAL_KERNEL_PANIC_INITIATED_BY_USER");
 
-  // BUILD REGISTRY (System + Puzzle Commands)
+  // 1. BUILD REGISTRY
   const registry = useMemo(() => {
     const reg = { ...SYSTEM_COMMANDS };
     PUZZLE_CONFIG.forEach((puzzle) => {
       if (puzzle.commands) {
+        // Check if puzzle has terminal commands
         Object.entries(puzzle.commands).forEach(([cmdName, cmdDef]) => {
           reg[cmdName] = cmdDef;
         });
@@ -34,54 +37,68 @@ export default function Terminal({ onClose }) {
     return reg;
   }, []);
 
-  // MISSION BRIEFING (Run on Startup)
+  // 2. INITIALIZATION
   useEffect(() => {
     async function initTerminal() {
-      // Get Solved Levels
-      const { data } = await supabase
-        .from("solved_puzzles")
-        .select("puzzle_id")
-        .eq("user_id", user?.id);
+      // A. Fetch Solved Levels
+      let currentSolvedIds = [];
+      if (user) {
+        const { data } = await supabase
+          .from("solved_puzzles")
+          .select("puzzle_id")
+          .eq("user_id", user.id);
+        if (data) {
+          currentSolvedIds = data.map((r) => r.puzzle_id);
+          setSolvedIds(currentSolvedIds);
+        }
+      }
 
-      const solvedIds = data?.map((r) => r.puzzle_id) || [];
-
-      // Find Active Level (First Unsolved Terminal Level)
-      const activeLevel = PUZZLE_CONFIG.find(
-        (p) => p.type === "terminal" && !solvedIds.includes(p.id),
+      // B. Determine Next Mission (Fixes "Active Mission" Bug)
+      // Find the first puzzle (Browser OR Terminal) that isn't solved
+      const nextPuzzle = PUZZLE_CONFIG.find(
+        (p) => !currentSolvedIds.includes(p.id),
       );
 
-      // Build Startup Logs
       const startupLogs = [
         {
           type: "system",
-          content: `${SYSTEM_DATA.osName} Kernel ${SYSTEM_DATA.kernel}`,
+          content: `${SYSTEM_DATA.osName} Kernel ${SYSTEM_DATA.version}`,
         },
-        { type: "system", content: `Build: ${SYSTEM_DATA.buildNumber}` },
-        { type: "system", content: `Connected as: ${user?.email}` },
+        { type: "system", content: `Connected as: ${user?.email || "guest"}` },
         { type: "info", content: "----------------------------------------" },
       ];
 
-      if (activeLevel) {
-        startupLogs.push({
-          type: "success",
-          content: `ACTIVE MISSION: ${activeLevel.title}`,
-        });
-        startupLogs.push({
-          type: "info",
-          content: `OBJECTIVE: ${activeLevel.desc}`,
-        });
-
-        // Show Level Specific Hint
-        if (activeLevel.onStart) {
-          startupLogs.push({
-            type: "warning",
-            content: `>> ${activeLevel.onStart}`,
-          });
-        }
-      } else {
+      if (!nextPuzzle) {
         startupLogs.push({
           type: "success",
           content: "ALL SYSTEMS SECURE. No active threats.",
+        });
+      } else if (nextPuzzle.type === "terminal") {
+        // It's a Terminal Level - Show Briefing
+        startupLogs.push({
+          type: "success",
+          content: `ACTIVE MISSION: ${nextPuzzle.title}`,
+        });
+        startupLogs.push({
+          type: "info",
+          content: `OBJECTIVE: ${nextPuzzle.desc}`,
+        });
+        if (nextPuzzle.onStart) {
+          startupLogs.push({
+            type: "warning",
+            content: `>> ${nextPuzzle.onStart}`,
+          });
+        }
+      } else {
+        // It's a Browser Level - Show Warning
+        startupLogs.push({
+          type: "warning",
+          content: `ALERT: Threat detected in ${nextPuzzle.title}.`,
+        });
+
+        startupLogs.push({
+          type: "error",
+          content: `Terminal: RESTRICTED MODE`,
         });
       }
 
@@ -97,15 +114,13 @@ export default function Terminal({ onClose }) {
       setHistory(startupLogs);
     }
 
-    if (user) initTerminal();
+    initTerminal();
   }, [user]);
 
-  // Auto-scroll
+  // Auto-scroll & Focus
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history]);
-
-  // Focus Input on Mount & Click
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -119,15 +134,31 @@ export default function Terminal({ onClose }) {
       const cmdStr = input.trim();
       if (!cmdStr) return;
 
-      // Log the command with the Current Working Directory
       addToHistory("user", `root@ph0enix:${cwd}# ${cmdStr}`);
-
       setInput("");
       setCursorPos(0);
       setProcessing(true);
 
       const args = cmdStr.split(" ");
       const commandName = args[0].toLowerCase();
+
+      // --- AUTOMATIC GLOBAL LOCK CHECK ---
+      // This single line secures your entire terminal
+      const lockStatus = checkCommandLock(commandName, solvedIds);
+
+      if (lockStatus.isLocked) {
+        addToHistory(
+          "error",
+          `PERMISSION DENIED: Command '${commandName}' is encrypted.`,
+        );
+        addToHistory(
+          "info",
+          `security_protocol: Unlocks after completing ${lockStatus.requiredLevel}`,
+        );
+        setProcessing(false);
+        return; // STOP EXECUTION HERE
+      }
+      // -----------------------------------
 
       try {
         const command = registry[commandName];
@@ -140,6 +171,8 @@ export default function Terminal({ onClose }) {
             registry,
             cwd,
             setCwd,
+            solvedIds,
+            setSolvedIds,
           });
         } else {
           addToHistory("error", `Command not found: ${commandName}`);
@@ -151,12 +184,10 @@ export default function Terminal({ onClose }) {
     }
   };
 
-  // Cursor & Input Handlers
   const handleInputChange = (e) => {
     setInput(e.target.value);
     setCursorPos(e.target.selectionStart);
   };
-
   const handleCursorSelect = (e) => {
     setCursorPos(e.target.selectionStart);
   };
@@ -166,7 +197,6 @@ export default function Terminal({ onClose }) {
       className="h-full bg-black text-green-500 font-mono text-sm p-4 flex flex-col overflow-hidden scanline relative"
       onClick={() => inputRef.current?.focus()}
     >
-      {/* Header */}
       <div className="flex justify-between items-center border-b border-green-900/50 pb-2 mb-2 shrink-0 z-20">
         <span className="text-xs uppercase tracking-widest text-green-700">
           /bin/bash
@@ -175,8 +205,6 @@ export default function Terminal({ onClose }) {
           [X]
         </button>
       </div>
-
-      {/* History Output */}
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-1 pb-4 z-20">
         {history.map((line, i) => (
           <div
@@ -186,10 +214,10 @@ export default function Terminal({ onClose }) {
                 ? "text-red-500"
                 : line.type === "success"
                   ? "text-green-300 font-bold"
-                  : line.type === "warning"
-                    ? "text-yellow-500"
-                    : line.type === "system"
-                      ? "text-green-800"
+                  : line.type === "system"
+                    ? "text-green-800"
+                    : line.type === "warning"
+                      ? "text-yellow-500"
                       : line.type === "user"
                         ? "text-white"
                         : "text-green-500"
@@ -203,14 +231,9 @@ export default function Terminal({ onClose }) {
         )}
         <div ref={bottomRef} />
       </div>
-
-      {/* Input Area */}
       <div className="flex items-center gap-2 mt-2 shrink-0 z-20 relative text-base">
-        {/* Dynamic Prompt with CWD */}
         <span className="text-green-600 shrink-0">root@ph0enix:{cwd}#</span>
-
         <div className="relative flex-1 flex flex-wrap break-all">
-          {/* Hidden Input for Typing Logic */}
           <input
             ref={inputRef}
             type="text"
@@ -222,8 +245,6 @@ export default function Terminal({ onClose }) {
             autoComplete="off"
             autoFocus
           />
-
-          {/* Visual Output with Block Cursor */}
           <span className="text-white whitespace-pre-wrap">
             {input.slice(0, cursorPos)}
             <span className="border-b-2 border-green-500 animate-pulse text-white">
