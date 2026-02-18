@@ -1,142 +1,312 @@
-import { useState } from "react";
-import { CONTACTS } from "../../data/story";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   ArrowLeft,
-  Send,
-  Phone,
-  Video,
   MoreVertical,
   Search,
+  Phone,
+  Video,
+  Send,
+  Image,
+  Mic,
+  Lock,
 } from "lucide-react";
 
-export default function Messenger({ onClose }) {
-  const [activeChat, setActiveChat] = useState(null);
+export default function Messenger({ onClose, messages = [], markAsRead }) {
+  const [activeChatId, setActiveChatId] = useState(null);
+  const bottomRef = useRef(null);
+
+  // 1. Mark as read immediately when opened
+  useEffect(() => {
+    if (markAsRead) markAsRead();
+  }, []);
+
+  // 2. GROUP MESSAGES BY SENDER
+  const contacts = useMemo(() => {
+    const groups = {};
+
+    messages.forEach((msg) => {
+      const sender = msg.sender || {
+        id: "UNKNOWN",
+        name: "Unknown",
+        avatar: "",
+      };
+      const senderId = sender.id;
+
+      if (!groups[senderId]) {
+        groups[senderId] = {
+          id: senderId,
+          name: sender.name,
+          avatar: sender.avatar,
+          status: sender.status || "Offline",
+          messages: [],
+          lastMessage: "",
+          lastTime: "Now",
+        };
+      }
+      groups[senderId].messages.push(msg);
+      groups[senderId].lastMessage = msg.text;
+    });
+
+    return Object.values(groups);
+  }, [messages]);
+
+  // 3. Auto-Scroll
+  useEffect(() => {
+    if (activeChatId && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [activeChatId, messages]);
+
+  // 4. Desktop Auto-Select
+  useEffect(() => {
+    if (!activeChatId && contacts.length > 0 && window.innerWidth > 768) {
+      setActiveChatId(contacts[0].id);
+    }
+  }, [contacts]);
+
+  const activeChat = contacts.find((c) => c.id === activeChatId);
+
+  // --- SUB-COMPONENTS ---
+
+  const SidebarItem = ({ chat }) => (
+    <div
+      onClick={() => setActiveChatId(chat.id)}
+      className={`flex items-center gap-3 p-4 cursor-pointer transition-colors border-b border-white/5
+        ${activeChatId === chat.id ? "bg-white/10" : "hover:bg-white/5"}
+      `}
+    >
+      <div className="relative shrink-0">
+        <img
+          src={chat.avatar}
+          className="w-12 h-12 rounded-full bg-neutral-800 object-cover border border-white/10"
+          alt={chat.name}
+        />
+        {/* Online Indicator */}
+        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#121212]"></div>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-baseline mb-1">
+          <h3 className="font-bold text-sm text-neutral-200 truncate">
+            {chat.name}
+          </h3>
+          <span className="text-[10px] text-neutral-500">{chat.lastTime}</span>
+        </div>
+        <p className="text-xs text-neutral-400 truncate">
+          {chat.messages[chat.messages.length - 1]?.sender === "me" && (
+            <span className="text-neutral-500">You: </span>
+          )}
+          {chat.lastMessage}
+        </p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="h-full bg-neutral-900 text-white flex flex-col font-sans animate-in slide-in-from-right duration-300">
-      {activeChat ? (
-        // --- CHAT VIEW ---
-        <div className="flex flex-col h-full bg-black/50">
-          {/* Chat Header */}
-          <div className="bg-neutral-800 p-3 flex items-center justify-between border-b border-neutral-700">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setActiveChat(null)}
-                className="hover:bg-white/10 p-1 rounded-full"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <img src={activeChat.avatar} className="w-8 h-8 rounded-full" />
-              <div>
-                <h3 className="text-sm font-bold">{activeChat.name}</h3>
-                <span className="text-[10px] text-green-400">
-                  Online via Proxy
-                </span>
-              </div>
+    <div className="h-full bg-[#121212] text-white flex font-sans overflow-hidden animate-in fade-in duration-300">
+      {/* === LEFT SIDEBAR (Contacts) === */}
+      <div
+        className={`
+        flex-col border-r border-white/10 bg-[#121212] w-full md:w-80 shrink-0
+        ${activeChatId ? "hidden md:flex" : "flex"}
+      `}
+      >
+        {/* Header */}
+        <div className="p-4 bg-neutral-900 border-b border-white/5 flex justify-between items-center shrink-0 h-16">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-900/20">
+              S
             </div>
-            <div className="flex gap-4 text-neutral-400">
-              <Phone size={18} />
-              <Video size={18} />
-              <MoreVertical size={18} />
-            </div>
+            <span className="font-bold text-lg tracking-wide">Signal</span>
           </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[url('https://i.pinimg.com/originals/97/c0/07/97c00759d90d786d9b6096d274ad3e07.png')] bg-opacity-10 bg-repeat">
-            {activeChat.messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col max-w-[80%] ${msg.sender === "me" ? "ml-auto items-end" : "mr-auto items-start"}`}
-              >
-                <div
-                  className={`p-3 rounded-2xl text-sm shadow-sm ${
-                    msg.sender === "me"
-                      ? "bg-green-700 text-white rounded-tr-none"
-                      : "bg-neutral-800 text-neutral-200 rounded-tl-none border border-neutral-700"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-                <span className="text-[10px] text-neutral-500 mt-1 px-1">
-                  {msg.time}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* Input Area (Fake) */}
-          <div className="p-3 bg-neutral-800 flex gap-2 items-center">
-            <input
-              disabled
-              type="text"
-              placeholder="Connection encrypted. Reply disabled."
-              className="flex-1 bg-neutral-900 rounded-full px-4 py-2 text-sm text-neutral-500 focus:outline-none cursor-not-allowed"
+          <div className="flex gap-4 text-neutral-400">
+            <Search size={20} className="hover:text-white cursor-pointer" />
+            <MoreVertical
+              size={20}
+              className="hover:text-white cursor-pointer"
             />
             <button
-              disabled
-              className="p-2 bg-neutral-700 rounded-full text-neutral-500"
+              onClick={onClose}
+              className="md:hidden text-xs bg-neutral-800 px-2 py-1 rounded border border-white/10"
             >
-              <Send size={18} />
+              Exit
             </button>
           </div>
         </div>
-      ) : (
-        // --- CONTACT LIST VIEW ---
-        <div className="flex flex-col h-full">
-          {/* App Header */}
-          <div className="p-4 bg-neutral-800 flex justify-between items-center shadow-md z-10">
-            <span className="font-bold text-lg tracking-wide">Signal</span>
-            <div className="flex gap-3 text-neutral-400">
-              <Search size={20} />
-              <MoreVertical size={20} />
-              <button
-                onClick={onClose}
-                className="text-sm bg-neutral-700 px-2 py-1 rounded text-white"
-              >
-                Close
-              </button>
-            </div>
-          </div>
 
-          {/* List */}
-          <div className="flex-1 overflow-y-auto">
-            {CONTACTS.map((chat) => (
-              <div
-                key={chat.id}
-                onClick={() => setActiveChat(chat)}
-                className="flex items-center gap-4 p-4 hover:bg-white/5 cursor-pointer border-b border-white/5 transition-colors"
-              >
-                <div className="relative">
-                  <img
-                    src={chat.avatar}
-                    className="w-12 h-12 rounded-full bg-neutral-700"
-                  />
-                  {chat.unread > 0 && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-[10px] text-black font-bold border border-black">
-                      {chat.unread}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <h3 className="font-semibold text-sm truncate">
-                      {chat.name}
-                    </h3>
-                    <span className="text-[10px] text-neutral-500">
-                      10:45 PM
-                    </span>
+        {/* List */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {contacts.length === 0 ? (
+            <div className="p-8 text-center text-neutral-600 text-sm italic flex flex-col items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+              Searching for encrypted signals...
+            </div>
+          ) : (
+            contacts.map((chat) => <SidebarItem key={chat.id} chat={chat} />)
+          )}
+        </div>
+      </div>
+
+      {/* === RIGHT MAIN AREA (Chat Window) === */}
+      <div
+        className={`
+        flex-1 flex-col bg-[#0a0a0a] relative
+        ${!activeChatId ? "hidden md:flex" : "flex w-full"}
+      `}
+      >
+        {activeChat ? (
+          <>
+            {/* Chat Header */}
+            <div className="h-16 px-4 bg-neutral-900 border-b border-white/5 flex items-center justify-between shrink-0 z-10 shadow-sm">
+              <div className="flex items-center gap-3">
+                {/* Back Button (Mobile Only) */}
+                <button
+                  onClick={() => setActiveChatId(null)}
+                  className="md:hidden p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                  <ArrowLeft size={20} className="text-neutral-300" />
+                </button>
+
+                <img
+                  src={activeChat.avatar}
+                  className="w-9 h-9 rounded-full bg-neutral-800 object-cover border border-white/5"
+                />
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    {activeChat.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-[10px] text-green-500 font-medium">
+                    <Lock size={9} strokeWidth={3} /> {activeChat.status}
                   </div>
-                  <p
-                    className={`text-xs truncate ${chat.unread > 0 ? "text-white font-medium" : "text-neutral-500"}`}
-                  >
-                    {chat.lastMessage}
-                  </p>
                 </div>
               </div>
-            ))}
+
+              <div className="flex items-center gap-5 text-neutral-400">
+                <Video
+                  size={20}
+                  className="hover:text-white cursor-not-allowed opacity-50 transition-colors"
+                />
+                <Phone
+                  size={20}
+                  className="hover:text-white cursor-not-allowed opacity-50 transition-colors"
+                />
+                <div className="border-l border-white/10 h-6 mx-1 md:block hidden"></div>
+                {/* Removed duplicate Search icon here */}
+                <MoreVertical
+                  size={20}
+                  className="hover:text-white cursor-pointer transition-colors"
+                />
+                <button
+                  onClick={onClose}
+                  className="hidden md:block hover:text-red-400 font-bold ml-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0a0a0a] relative custom-scrollbar">
+              {/* Subtle Noise Texture Overlay */}
+              <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+
+              {/* Encryption Notice */}
+              <div className="flex justify-center my-6">
+                <div className="bg-yellow-500/10 text-yellow-500 px-4 py-1.5 rounded-lg border border-yellow-500/20 shadow-sm flex items-center gap-2 max-w-[90%] sm:max-w-fit">
+                  <Lock size={12} className="shrink-0" />
+                  <span className="text-[10px] sm:text-xs text-center leading-tight">
+                    Messages are end-to-end encrypted. No one outside of this
+                    chat, not even Signal, can read them.
+                  </span>
+                </div>
+              </div>
+
+              {activeChat.messages.map((msg, idx) => {
+                const isMe = msg.sender === "me";
+                return (
+                  <div
+                    key={idx}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 duration-300 relative z-10`}
+                  >
+                    <div
+                      className={`
+                        max-w-[85%] sm:max-w-[70%] p-3 rounded-2xl text-sm shadow-md leading-relaxed
+                        ${
+                          isMe
+                            ? "bg-green-700 text-white rounded-br-none"
+                            : "bg-neutral-800 text-neutral-100 rounded-bl-none border border-white/5"
+                        }
+                      `}
+                    >
+                      {msg.text}
+                      <div
+                        className={`text-[9px] mt-1 text-right font-medium opacity-70 ${isMe ? "text-green-100" : "text-neutral-400"}`}
+                      >
+                        {msg.time || "Now"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-3 bg-[#121212] shrink-0 flex items-center gap-3 border-t border-white/5 z-20">
+              <button className="p-2 rounded-full bg-neutral-800 text-neutral-400 hover:text-white transition-colors">
+                <div className="bg-white/10 rounded-full p-1">
+                  <span className="text-xl leading-none font-light">+</span>
+                </div>
+              </button>
+
+              <div className="flex-1 bg-neutral-800 rounded-full px-4 py-2.5 flex items-center gap-3 border border-transparent focus-within:border-white/10 transition-colors">
+                <input
+                  type="text"
+                  disabled
+                  placeholder="Signal message"
+                  className="bg-transparent w-full text-sm text-neutral-300 placeholder:text-neutral-500 focus:outline-none cursor-not-allowed"
+                />
+                <Image
+                  size={18}
+                  className="text-neutral-500 hover:text-neutral-300 cursor-not-allowed"
+                />
+                <Mic
+                  size={18}
+                  className="text-neutral-500 hover:text-neutral-300 cursor-not-allowed"
+                />
+              </div>
+
+              <button className="p-3 rounded-full bg-neutral-800 text-neutral-500 hover:bg-neutral-700 transition-colors cursor-not-allowed">
+                <Send size={18} className="ml-0.5" />
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Empty State */
+          <div className="h-full flex flex-col items-center justify-center text-neutral-600 space-y-4 p-8 select-none">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-neutral-800/50 flex items-center justify-center border border-white/5">
+                <Lock size={40} className="text-neutral-700" />
+              </div>
+              <div className="absolute top-0 right-0 w-6 h-6 bg-green-600 rounded-full border-4 border-[#0a0a0a]"></div>
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-bold text-neutral-300 tracking-tight">
+                Ph0enix Signal
+              </h3>
+              <p className="text-sm text-neutral-500 max-w-xs mx-auto leading-relaxed">
+                Send and receive encrypted messages from <br />
+                anywhere in the network.
+              </p>
+            </div>
+            <div className="mt-8 flex gap-2">
+              <span className="w-2 h-2 bg-neutral-700 rounded-full animate-bounce"></span>
+              <span className="w-2 h-2 bg-neutral-700 rounded-full animate-bounce delay-100"></span>
+              <span className="w-2 h-2 bg-neutral-700 rounded-full animate-bounce delay-200"></span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

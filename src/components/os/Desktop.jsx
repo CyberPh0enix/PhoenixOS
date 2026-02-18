@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { useHintSystem } from "../../hooks/useHintSystem";
 import { SYSTEM_DATA, WALLPAPER_mVjq } from "../../config/build.prop";
 import {
   Terminal as TerminalIcon,
@@ -24,9 +25,11 @@ import Leaderboard from "../apps/Leaderboard";
 import LogoutConfirmation from "./LogoutConfirm";
 
 export default function Desktop() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const [activeApp, setActiveApp] = useState(null);
   const [showLogout, setShowLogout] = useState(false);
+  const [solvedIds, setSolvedIds] = useState([]);
+  const { messages, unreadCount, markAsRead } = useHintSystem(solvedIds);
 
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -50,7 +53,9 @@ export default function Desktop() {
       name: "Signal",
       icon: MessageSquare,
       color: "text-blue-500",
-      component: Messenger,
+      component: (props) => (
+        <Messenger {...props} messages={messages} markAsRead={markAsRead} />
+      ),
     },
     {
       id: "leaderboard",
