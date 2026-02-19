@@ -199,7 +199,6 @@ export default function Desktop() {
           </div>
         </>
       )}
-
       {/* ================= MOBILE UI ================= */}
       {!isDesktop && (
         <>
@@ -258,11 +257,12 @@ export default function Desktop() {
       {/* Active App Window */}
       {activeApp && (
         <div
-          className={`absolute z-40 bg-neutral-900 shadow-2xl overflow-hidden
+          key={activeApp.id}
+          className={`absolute z-40 bg-neutral-900 overflow-hidden shadow-2xl
           ${
             isDesktop
-              ? "top-10 left-10 right-10 bottom-28 rounded-xl border border-white/10 animate-in zoom-in-95"
-              : "top-8 left-0 right-0 bottom-14 animate-in slide-in-from-bottom duration-300"
+              ? "top-10 left-10 right-10 bottom-28 rounded-xl border border-white/10 animate-oxygen-zoom"
+              : "top-8 left-0 right-0 bottom-14 animate-oxygen-zoom"
           }
         `}
         >

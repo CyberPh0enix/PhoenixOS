@@ -75,3 +75,22 @@ body {
 .animate-progress {
   animation: progress 0.4s ease-out forwards;
 }
+
+@keyframes oxygen-zoom {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-oxygen-zoom {
+  /* 0.2s duration with a fast-out, slow-in deceleration curve */
+  animation: oxygen-zoom 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform-origin: center center;
+  /* Hardware acceleration hint for the browser */
+  will-change: transform, opacity;
+}
