@@ -286,4 +286,36 @@ export const LEVEL_CONFIG = [
       },
     ],
   },
+  {
+    id: "level-10",
+    type: "terminal",
+    title: "Privilege Escalation",
+    desc: "Identity Spoofing & TTY Bypass",
+    requires: "level-09",
+    color: "bg-purple-900 text-purple-400",
+    terminalCommands: ["su"],
+    onStart: "Initial foothold secured. Escalate to root.",
+    encryptedFlag:
+      "666c61677b726f6f745f70726976696c6567655f657363616c6174696f6e5f636f6d706c6574657d",
+    hints: [
+      {
+        id: "h10-1",
+        delay: 15,
+        sender: "GLITCH",
+        text: "We have execution, but we are just a regular user. Check your `~/todo` again. The admin left a note.",
+      },
+      {
+        id: "h10-2",
+        delay: 70,
+        sender: "SYSTEM",
+        text: "SECURITY WARNING: Plaintext credentials detected in `backups` directory.",
+      },
+      {
+        id: "h10-3",
+        delay: 140,
+        sender: "UNKNOWN",
+        text: "Sysadmins always reuse passwd. dB passwd is what u need, then run `su <user> <auth>` to steal their identity.",
+      },
+    ],
+  },
 ];
