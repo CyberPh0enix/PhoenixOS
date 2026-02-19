@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import eruda from "eruda";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -11,6 +12,8 @@ import {
   Layers,
   Activity,
   Bug,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import LogoutConfirmation from "../os/LogoutConfirm";
 import { SYSTEM_DATA } from "../../config/build.prop";
@@ -22,21 +25,54 @@ export default function Settings({ onClose }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // EASTER EGG STATES
-  const [devClicks, setDevClicks] = useState(0);
-  const [devMode, setDevMode] = useState(false);
-
   const [osClicks, setOsClicks] = useState(0);
   const [showOsEgg, setShowOsEgg] = useState(false);
 
+  // devMode states
+  const [devClicks, setDevClicks] = useState(0);
+
+  const [devMenuUnlocked, setDevMenuUnlocked] = useState(
+    localStorage.getItem("_DEV_MENU_UNLOCKED") === "true",
+  );
+
+  // master switch
+  const [devModeActive, setDevModeActive] = useState(
+    localStorage.getItem("_DEV_MODE_ACTIVE") === "true",
+  );
+
+  // Eruda
+  const [webInspectorActive, setWebInspectorActive] = useState(
+    localStorage.getItem("_WEB_INSPECTOR_ACTIVE") === "true",
+  );
+
   const handleBuildClick = () => {
-    if (devMode) return;
+    if (devMenuUnlocked) return;
     const newCount = devClicks + 1;
     setDevClicks(newCount);
     if (newCount >= 7) {
-      setDevMode(true);
+      setDevMenuUnlocked(true);
+      localStorage.setItem("_DEV_MENU_UNLOCKED", "true");
+
+      // enable the master switch on initial unlock
+      setDevModeActive(true);
+      localStorage.setItem("_DEV_MODE_ACTIVE", "true");
+
       addToast("Developer Mode Enabled. Debugging active.", "warning");
       devExploitManager.triggerDevMode(); // breadcrumbs
     }
+  };
+
+  const toggleDevMode = () => {
+    const newState = !devModeActive;
+    setDevModeActive(newState);
+    localStorage.setItem("_DEV_MODE_ACTIVE", newState.toString());
+  };
+
+  const toggleWebInspector = () => {
+    if (!devModeActive) return; // Prevent toggling if master switch is off
+    const newState = !webInspectorActive;
+    setWebInspectorActive(newState);
+    localStorage.setItem("_WEB_INSPECTOR_ACTIVE", newState.toString());
   };
 
   // 2. OS VERSION EASTER EGG LOGIC (3 Clicks)
@@ -55,6 +91,33 @@ export default function Settings({ onClose }) {
       return () => clearTimeout(timer);
     }
   }, [osClicks]);
+
+  useEffect(() => {
+    if (!devModeActive && webInspectorActive) {
+      setWebInspectorActive(false);
+      localStorage.setItem("_WEB_INSPECTOR_ACTIVE", "false");
+    }
+  }, [devModeActive]);
+
+  useEffect(() => {
+    if (devModeActive && webInspectorActive) {
+      if (!eruda._isInit) {
+        eruda.init({
+          defaults: {
+            displaySize: 40,
+            transparency: 0.9,
+            theme: "Monokai Pro",
+          },
+        });
+        addToast("Mobile Web Inspector Injected.", "success");
+      }
+    } else {
+      if (eruda._isInit) {
+        eruda.destroy();
+        addToast("Mobile Web Inspector Removed.", "info");
+      }
+    }
+  }, [devModeActive, webInspectorActive]);
 
   return (
     <div className="h-full bg-neutral-900 text-white flex flex-col font-mono animate-in slide-in-from-right duration-300 relative overflow-hidden">
@@ -139,8 +202,8 @@ export default function Settings({ onClose }) {
           </div>
         </div>
 
-        {/* HIDDEN DEV MENU (Now Interactive) */}
-        {devMode && (
+        {/* HIDDEN DEV MENU */}
+        {devMenuUnlocked && (
           <div className="bg-green-900/10 p-4 rounded-xl border border-green-500/30 space-y-3 animate-in fade-in slide-in-from-bottom-2">
             <div className="flex items-center gap-3 text-green-400 mb-2">
               <Code size={18} />
@@ -148,34 +211,75 @@ export default function Settings({ onClose }) {
                 Developer Options
               </span>
             </div>
-            <p className="text-xs text-neutral-400">
-              Debug tools unlocked. Proceed with caution.
-            </p>
 
-            <button
-              onClick={() =>
-                addToast("Memory Dump: 0x000000 - [PROTECTED]", "error")
-              }
-              className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
+            {/* MASTER SWITCH */}
+            <div className="flex items-center justify-between py-2 border-b border-green-500/50">
+              <span className="text-xs font-bold text-neutral-200">
+                Developer Mode
+              </span>
+              <button
+                onClick={toggleDevMode}
+                className={`${devModeActive ? "text-green-500" : "text-neutral-500"} transition-colors`}
+              >
+                {devModeActive ? (
+                  <ToggleRight size={28} />
+                ) : (
+                  <ToggleLeft size={28} />
+                )}
+              </button>
+            </div>
+
+            {/* SUB-MENU */}
+            <div
+              className={`transition-opacity duration-300 space-y-3 ${devModeActive ? "opacity-100" : "opacity-30 pointer-events-none"}`}
             >
-              <Layers size={14} /> View Heap Dump
-            </button>
-            <button
-              onClick={() =>
-                addToast("Proxy Bypass: FAILED (Root Required)", "error")
-              }
-              className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
-            >
-              <Shield size={14} /> Bypass Network Proxy
-            </button>
-            <button
-              onClick={() =>
-                addToast("Error Logs: Clean. No threats detected.", "success")
-              }
-              className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
-            >
-              <Bug size={14} /> System Error Logs
-            </button>
+              {/* ERUDA TOOL SWITCH */}
+              <div className="flex items-center justify-between py-1 border-b border-green-500/20 mb-2">
+                <span className="text-xs text-neutral-300">
+                  Enable Web Inspector
+                </span>
+                <button
+                  onClick={toggleWebInspector}
+                  className={`${webInspectorActive ? "text-green-500" : "text-neutral-500"} transition-colors`}
+                >
+                  {webInspectorActive ? (
+                    <ToggleRight size={28} />
+                  ) : (
+                    <ToggleLeft size={28} />
+                  )}
+                </button>
+              </div>
+
+              <p className="text-[10px] text-neutral-400">
+                Debug tools active. View & Modify DOM.
+              </p>
+
+              {/* ACTION BUTTONS */}
+              <button
+                onClick={() =>
+                  addToast("Memory Dump: 0x000000 - [PROTECTED]", "error")
+                }
+                className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
+              >
+                <Layers size={14} /> View Heap Dump
+              </button>
+              <button
+                onClick={() =>
+                  addToast("Proxy Bypass: FAILED (Root Required)", "error")
+                }
+                className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
+              >
+                <Shield size={14} /> Bypass Network Proxy
+              </button>
+              <button
+                onClick={() =>
+                  addToast("Error Logs: Clean. No threats detected.", "success")
+                }
+                className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
+              >
+                <Bug size={14} /> System Error Logs
+              </button>
+            </div>
           </div>
         )}
 
