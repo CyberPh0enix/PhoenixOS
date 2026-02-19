@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
 import { PUZZLE_CONFIG } from "../../data/puzzles";
 import { SYSTEM_COMMANDS } from "../../data/commands";
 import { SYSTEM_DATA } from "../../config/build.prop";
@@ -8,29 +7,27 @@ import { checkCommandLock } from "../../utils/game";
 import { heistCommand } from "../../utils/devExploit";
 import { SensoryEngine } from "../../utils/sensory";
 
-export default function Terminal({ onClose }) {
+// ADDED PROPS HERE
+export default function Terminal({ onClose, solvedIds, setSolvedIds }) {
   const { user } = useAuth();
 
-  // STATE
+  // STATE (Removed solvedIds from here)
   const [history, setHistory] = useState([]);
   const [input, setInput] = useState("");
   const [cursorPos, setCursorPos] = useState(0);
   const [cwd, setCwd] = useState("/home/user");
   const [processing, setProcessing] = useState(false);
   const [crash, setCrash] = useState(false);
-  const [solvedIds, setSolvedIds] = useState([]); // Track Progress
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
   if (crash) throw new Error("MANUAL_KERNEL_PANIC_INITIATED_BY_USER");
 
-  // 1. BUILD REGISTRY
   const registry = useMemo(() => {
     const reg = { ...SYSTEM_COMMANDS, heist: heistCommand };
     PUZZLE_CONFIG.forEach((puzzle) => {
       if (puzzle.commands) {
-        // Check if puzzle has terminal commands
         Object.entries(puzzle.commands).forEach(([cmdName, cmdDef]) => {
           reg[cmdName] = cmdDef;
         });
@@ -39,27 +36,10 @@ export default function Terminal({ onClose }) {
     return reg;
   }, []);
 
-  // 2. INITIALIZATION
   useEffect(() => {
-    async function initTerminal() {
-      // A. Fetch Solved Levels
-      let currentSolvedIds = [];
-      if (user) {
-        const { data } = await supabase
-          .from("solved_puzzles")
-          .select("puzzle_id")
-          .eq("user_id", user.id);
-        if (data) {
-          currentSolvedIds = data.map((r) => r.puzzle_id);
-          setSolvedIds(currentSolvedIds);
-        }
-      }
-
-      // B. Determine Next Mission (Fixes "Active Mission" Bug)
-      // Find the first puzzle (Browser OR Terminal) that isn't solved
-      const nextPuzzle = PUZZLE_CONFIG.find(
-        (p) => !currentSolvedIds.includes(p.id),
-      );
+    function initTerminal() {
+      // Find the first puzzle that isn't solved using the global solvedIds prop
+      const nextPuzzle = PUZZLE_CONFIG.find((p) => !solvedIds.includes(p.id));
 
       const startupLogs = [
         {
@@ -76,7 +56,6 @@ export default function Terminal({ onClose }) {
           content: "ALL SYSTEMS SECURE. No active threats.",
         });
       } else if (nextPuzzle.type === "terminal") {
-        // It's a Terminal Level - Show Briefing
         startupLogs.push({
           type: "success",
           content: `ACTIVE MISSION: ${nextPuzzle.title}`,
@@ -92,12 +71,10 @@ export default function Terminal({ onClose }) {
           });
         }
       } else {
-        // It's a Browser Level - Show Warning
         startupLogs.push({
           type: "warning",
           content: `ALERT: Threat detected in ${nextPuzzle.title}.`,
         });
-
         startupLogs.push({
           type: "error",
           content: `Terminal: RESTRICTED MODE`,
@@ -117,12 +94,12 @@ export default function Terminal({ onClose }) {
     }
 
     initTerminal();
-  }, [user]);
+  }, [user, solvedIds]); // Re-run if solvedIds changes
 
-  // Auto-scroll & Focus
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history]);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
@@ -144,8 +121,7 @@ export default function Terminal({ onClose }) {
       const args = cmdStr.split(" ");
       const commandName = args[0].toLowerCase();
 
-      // --- AUTOMATIC GLOBAL LOCK CHECK ---
-      // This single line secures your entire terminal
+      // Check locks using the global state
       const lockStatus = checkCommandLock(commandName, solvedIds);
 
       if (lockStatus.isLocked) {
@@ -158,9 +134,8 @@ export default function Terminal({ onClose }) {
           `security_protocol: Unlocks after completing ${lockStatus.requiredLevel}`,
         );
         setProcessing(false);
-        return; // STOP EXECUTION HERE
+        return;
       }
-      // -----------------------------------
 
       try {
         const command = registry[commandName];
@@ -189,7 +164,7 @@ export default function Terminal({ onClose }) {
   const handleInputChange = (e) => {
     setInput(e.target.value);
     setCursorPos(e.target.selectionStart);
-    SensoryEngine.playKeystroke(); // mechanical click
+    SensoryEngine.playKeystroke();
   };
   const handleCursorSelect = (e) => {
     setCursorPos(e.target.selectionStart);
@@ -197,7 +172,7 @@ export default function Terminal({ onClose }) {
 
   return (
     <div
-      className="h-full bg-black text-green-500 font-mono text-sm p-4 flex flex-col overflow-hidden scanline relative"
+      className="h-full bg-black text-green-500 font-mono text-sm p-4 flex flex-col overflow-hidden relative"
       onClick={() => inputRef.current?.focus()}
     >
       <div className="flex justify-between items-center border-b border-green-900/50 pb-2 mb-2 shrink-0 z-20">

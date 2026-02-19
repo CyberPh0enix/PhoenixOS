@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import {
   Shield,
@@ -12,12 +11,11 @@ import {
   Globe,
 } from "lucide-react";
 
-export default function MissionControl({ onClose }) {
+// ADDED PROPS HERE
+export default function MissionControl({ onClose, solvedIds }) {
   const { user, profile, refreshProfile } = useAuth();
-  const [solvedIds, setSolvedIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Define the 15-Level Blueprint
   const LEVEL_MAP = [
     {
       id: "level-00",
@@ -58,22 +56,17 @@ export default function MissionControl({ onClose }) {
   ];
 
   useEffect(() => {
-    async function fetchProgress() {
-      if (!user) return;
-      const { data } = await supabase
-        .from("solved_puzzles")
-        .select("puzzle_id")
-        .eq("user_id", user.id);
-      if (data) setSolvedIds(data.map((r) => r.puzzle_id));
-      await refreshProfile(user.id);
+    async function loadProfile() {
+      if (user) {
+        await refreshProfile(user.id);
+      }
       setLoading(false);
     }
-    fetchProgress();
+    loadProfile();
   }, [user]);
 
   return (
     <div className="h-full bg-neutral-950 text-green-500 font-mono flex flex-col border border-green-900/50">
-      {/* HEADER: Wallet & Stats */}
       <div className="p-4 bg-green-950/20 border-b border-green-900/50 flex justify-between items-center shrink-0">
         <div>
           <h2 className="text-xl font-bold text-white tracking-widest flex items-center gap-2">
@@ -103,7 +96,6 @@ export default function MissionControl({ onClose }) {
         </div>
       </div>
 
-      {/* CONTENT: Skill Tree Map */}
       <div className="flex-1 overflow-y-auto p-6 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-950/20 via-neutral-950 to-neutral-950">
         {loading ? (
           <div className="h-full flex items-center justify-center animate-pulse text-green-700">
@@ -118,7 +110,6 @@ export default function MissionControl({ onClose }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
               {LEVEL_MAP.map((level, idx) => {
                 const isSolved = solvedIds.includes(level.id);
-                // Determine if this is the "Next" level to solve
                 const previousLevelId = idx > 0 ? LEVEL_MAP[idx - 1].id : null;
                 const isNext =
                   !isSolved &&
