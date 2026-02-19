@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 import {
   LogOut,
   User,
@@ -17,6 +18,7 @@ import { devExploitManager } from "../../utils/devExploit";
 
 export default function Settings({ onClose }) {
   const { user, logout } = useAuth();
+  const { addToast } = useToast();
   const [showConfirm, setShowConfirm] = useState(false);
 
   // EASTER EGG STATES
@@ -32,7 +34,7 @@ export default function Settings({ onClose }) {
     setDevClicks(newCount);
     if (newCount >= 7) {
       setDevMode(true);
-      alert("Developer Mode Enabled.");
+      addToast("Developer Mode Enabled. Debugging active.", "warning");
       devExploitManager.triggerDevMode(); // breadcrumbs
     }
   };
@@ -151,19 +153,25 @@ export default function Settings({ onClose }) {
             </p>
 
             <button
-              onClick={() => alert("Memory Dump: 0x000000 - [PROTECTED]")}
+              onClick={() =>
+                addToast("Memory Dump: 0x000000 - [PROTECTED]", "error")
+              }
               className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
             >
               <Layers size={14} /> View Heap Dump
             </button>
             <button
-              onClick={() => alert("Proxy Bypass: FAILED (Root Required)")}
+              onClick={() =>
+                addToast("Proxy Bypass: FAILED (Root Required)", "error")
+              }
               className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
             >
               <Shield size={14} /> Bypass Network Proxy
             </button>
             <button
-              onClick={() => alert("Error Logs: Clean")}
+              onClick={() =>
+                addToast("Error Logs: Clean. No threats detected.", "success")
+              }
               className="flex items-center gap-2 text-xs bg-green-500/10 text-green-300 px-3 py-2 rounded hover:bg-green-500/20 w-full text-left font-mono transition-colors border border-green-500/20"
             >
               <Bug size={14} /> System Error Logs

@@ -16,6 +16,7 @@ import {
   Target,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 
 // Apps
 import Terminal from "../apps/Terminal";
@@ -29,6 +30,7 @@ import { useDevExploitSequence } from "../../utils/devExploit";
 
 export default function Desktop() {
   const { user, logout } = useAuth();
+  const { addToast } = useToast();
   const [activeApp, setActiveApp] = useState(null);
   const [showLogout, setShowLogout] = useState(false);
   const [solvedIds, setSolvedIds] = useState([]);
@@ -84,7 +86,7 @@ export default function Desktop() {
   ];
 
   useDevExploitSequence(activeApp, () => {
-    alert("ROOT PRIVILEGES GRANTED. COMMAND 'heist' UNLOCKED.");
+    addToast("ROOT PRIVILEGES GRANTED. COMMAND 'heist' UNLOCKED.", "error");
     const terminalApp = apps.find((a) => a.id === "terminal");
     if (terminalApp) setActiveApp(terminalApp);
   });

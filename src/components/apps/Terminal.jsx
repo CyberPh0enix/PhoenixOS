@@ -6,6 +6,7 @@ import { SYSTEM_COMMANDS } from "../../data/commands";
 import { SYSTEM_DATA } from "../../config/build.prop";
 import { checkCommandLock } from "../../utils/game";
 import { heistCommand } from "../../utils/devExploit";
+import { SensoryEngine } from "../../utils/sensory";
 
 export default function Terminal({ onClose }) {
   const { user } = useAuth();
@@ -188,6 +189,7 @@ export default function Terminal({ onClose }) {
   const handleInputChange = (e) => {
     setInput(e.target.value);
     setCursorPos(e.target.selectionStart);
+    SensoryEngine.playKeystroke(); // mechanical click
   };
   const handleCursorSelect = (e) => {
     setCursorPos(e.target.selectionStart);
