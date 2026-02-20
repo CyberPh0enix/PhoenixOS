@@ -25,7 +25,6 @@ export function useHintSystem(solvedIds = []) {
     ).length;
     setUnreadCount(initialUnread);
 
-    // Allow a small buffer before enabling sounds so initial loads stay quiet
     setTimeout(() => {
       isInitialMount.current = false;
     }, 1500);
@@ -43,13 +42,13 @@ export function useHintSystem(solvedIds = []) {
       localStorage.setItem(storageKey, startTime);
     }
 
-    const hydrateHint = (msg) => {
+    const hydrateHint = (msg, levelId) => {
       const persona = PERSONAS[msg.sender];
       const now = new Date();
       return {
         ...msg,
+        levelId: levelId,
         sender: persona || { name: "Unknown", id: "UNKNOWN" },
-        // Add realistic timestamps and dates
         time: now.toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -72,7 +71,7 @@ export function useHintSystem(solvedIds = []) {
           if (solvedIds.includes(level.id) && level.hints) {
             level.hints.forEach((hint) => {
               if (!existingIds.has(hint.id)) {
-                newMessages.push(hydrateHint(hint));
+                newMessages.push(hydrateHint(hint, level.id));
                 hasNewMessages = true;
               }
             });
@@ -81,7 +80,7 @@ export function useHintSystem(solvedIds = []) {
           else if (level.id === currentLevelId && level.hints) {
             level.hints.forEach((hint) => {
               if (hint.delay <= elapsedSeconds && !existingIds.has(hint.id)) {
-                newMessages.push(hydrateHint(hint));
+                newMessages.push(hydrateHint(hint, level.id));
                 hasNewMessages = true;
               }
             });
@@ -89,13 +88,11 @@ export function useHintSystem(solvedIds = []) {
         });
 
         if (hasNewMessages) {
-          // Save updated history
           localStorage.setItem(
             "ph0enix_msg_history",
             JSON.stringify(newMessages),
           );
 
-          // Calculate new unread
           const readIds = JSON.parse(
             localStorage.getItem("ph0enix_msg_read") || "[]",
           );
@@ -104,9 +101,8 @@ export function useHintSystem(solvedIds = []) {
           ).length;
           setUnreadCount(unread);
 
-          // FIRE SENSORY PING (Only if not initial load)
           if (!isInitialMount.current) {
-            SensoryEngine.triggerAlert(); // Plays the ping + triggers vibration
+            SensoryEngine.triggerAlert();
           }
 
           return newMessages;

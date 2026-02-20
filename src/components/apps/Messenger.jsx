@@ -9,50 +9,161 @@ import {
   Image,
   Mic,
   Lock,
+  Shield,
 } from "lucide-react";
+import { LEVEL_CONFIG } from "../../data/config";
 
-export default function Messenger({ onClose, messages = [], markAsRead }) {
+export default function Messenger({
+  onClose,
+  messages = [],
+  markAsRead,
+  solvedIds = [],
+  skippedIds = [],
+  progressionIds = [],
+}) {
   const [activeChatId, setActiveChatId] = useState(null);
   const bottomRef = useRef(null);
+
+  // QUEUE STATE FOR TYPING INDICATORS
+  const [visibleMessages, setVisibleMessages] = useState([]);
+  const [pendingMessages, setPendingMessages] = useState([]);
+  const [typingChats, setTypingChats] = useState(new Set());
+
+  // [FIX] Use refs to avoid React Stale Closures during live updates
+  const initialized = useRef(false);
+  const processedIds = useRef(new Set());
+
+  // 1. Calculate the Active Node for the Green Pulse
+  const activeLevel = LEVEL_CONFIG.find(
+    (level) =>
+      (!level.requires || progressionIds.includes(level.requires)) &&
+      !solvedIds.includes(level.id) &&
+      !skippedIds.includes(level.id),
+  );
+  const activeLevelId = activeLevel ? activeLevel.id : null;
 
   useEffect(() => {
     if (markAsRead) markAsRead();
   }, []);
 
+  // 2. The Smart Message Interceptor
+  useEffect(() => {
+    if (!initialized.current) {
+      // On first load, render everything instantly
+      setVisibleMessages(messages);
+      messages.forEach((m) => processedIds.current.add(m.id));
+
+      const timer = setTimeout(() => {
+        initialized.current = true;
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Find truly new messages using our bulletproof processedIds ref
+      const newMsgs = messages.filter((m) => !processedIds.current.has(m.id));
+
+      if (newMsgs.length > 0) {
+        newMsgs.forEach((m) => processedIds.current.add(m.id)); // Mark as seen
+        setPendingMessages((prev) => [...prev, ...newMsgs]); // Push to queue
+      }
+    }
+  }, [messages]);
+
+  // 3. Process the Queue (The Typing Engine)
+  useEffect(() => {
+    if (pendingMessages.length > 0) {
+      const msg = pendingMessages[0];
+      const pId = msg.puzzleId || msg.levelId || "SYSTEM";
+
+      // Turn ON typing indicator
+      setTypingChats((prev) => new Set(prev).add(pId));
+
+      const timer = setTimeout(() => {
+        // Turn OFF typing indicator
+        setTypingChats((prev) => {
+          const next = new Set(prev);
+          next.delete(pId);
+          return next;
+        });
+
+        // Move message to visible
+        setVisibleMessages((prev) => [...prev, msg]);
+
+        // Remove from pending queue to trigger the next one
+        setPendingMessages((prev) => prev.slice(1));
+
+        if (markAsRead) markAsRead();
+      }, 2500); // 2.5 seconds of "Typing..."
+
+      return () => clearTimeout(timer);
+    }
+  }, [pendingMessages]);
+
+  // 4. Group by Level & Sort by Activity
   const contacts = useMemo(() => {
     const groups = {};
-    messages.forEach((msg) => {
-      const sender = msg.sender || {
-        id: "UNKNOWN",
-        name: "Unknown",
-        avatar: "",
-      };
-      const senderId = sender.id;
 
-      if (!groups[senderId]) {
-        groups[senderId] = {
-          id: senderId,
-          name: sender.name,
-          avatar: sender.avatar,
-          status: sender.status || "Offline",
+    // Process already visible messages
+    visibleMessages.forEach((msg, idx) => {
+      const pId = msg.puzzleId || msg.levelId || "SYSTEM";
+      const puzzle = LEVEL_CONFIG.find((p) => p.id === pId);
+      const groupName = puzzle
+        ? puzzle.title
+        : pId === "SYSTEM"
+          ? "Global Broadcasts"
+          : pId.toUpperCase();
+
+      if (!groups[pId]) {
+        groups[pId] = {
+          id: pId,
+          name: groupName,
+          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${pId}&backgroundColor=0a0a0a`,
           messages: [],
           lastMessage: "",
           lastTime: "Now",
+          status: puzzle ? "Active Mission Thread" : "Encrypted Channel",
+          orderIndex: -1,
+          isTyping: typingChats.has(pId),
         };
       }
-      groups[senderId].messages.push(msg);
-      groups[senderId].lastMessage = msg.text;
-      groups[senderId].lastTime = msg.time; // Use the actual stored time
+      groups[pId].messages.push(msg);
+      groups[pId].lastMessage = msg.text;
+      groups[pId].lastTime = msg.time;
+      groups[pId].orderIndex = idx;
     });
-    return Object.values(groups);
-  }, [messages]);
 
+    // Inject pending chats so they jump to the top and show "Typing..."
+    pendingMessages.forEach((msg) => {
+      const pId = msg.puzzleId || msg.levelId || "SYSTEM";
+      if (!groups[pId]) {
+        const puzzle = LEVEL_CONFIG.find((p) => p.id === pId);
+        groups[pId] = {
+          id: pId,
+          name: puzzle ? puzzle.title : "Unknown Thread",
+          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${pId}&backgroundColor=0a0a0a`,
+          messages: [],
+          lastMessage: "...",
+          lastTime: "Now",
+          status: "Encrypted Channel",
+          orderIndex: 999999,
+          isTyping: true,
+        };
+      } else {
+        groups[pId].isTyping = true;
+        groups[pId].orderIndex += 99999; // Bump to absolute top
+      }
+    });
+
+    return Object.values(groups).sort((a, b) => b.orderIndex - a.orderIndex);
+  }, [visibleMessages, pendingMessages, typingChats]);
+
+  // Auto-scroll to bottom smoothly
   useEffect(() => {
     if (activeChatId && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [activeChatId, messages]);
+  }, [activeChatId, visibleMessages, typingChats]);
 
+  // Default select the top chat
   useEffect(() => {
     if (!activeChatId && contacts.length > 0 && window.innerWidth > 768) {
       setActiveChatId(contacts[0].id);
@@ -61,35 +172,55 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
 
   const activeChat = contacts.find((c) => c.id === activeChatId);
 
-  const SidebarItem = ({ chat }) => (
-    <div
-      onClick={() => setActiveChatId(chat.id)}
-      className={`flex items-center gap-3 p-4 cursor-pointer transition-colors border-b border-white/5 ${activeChatId === chat.id ? "bg-white/10" : "hover:bg-white/5"}`}
-    >
-      <div className="relative shrink-0">
-        <img
-          src={chat.avatar}
-          className="w-12 h-12 rounded-full bg-neutral-800 object-cover border border-white/10"
-          alt={chat.name}
-        />
-        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#121212]"></div>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-baseline mb-1">
-          <h3 className="font-bold text-sm text-neutral-200 truncate">
-            {chat.name}
-          </h3>
-          <span className="text-[10px] text-neutral-500">{chat.lastTime}</span>
-        </div>
-        <p className="text-xs text-neutral-400 truncate">
-          {chat.messages[chat.messages.length - 1]?.sender === "me" && (
-            <span className="text-neutral-500">You: </span>
+  const SidebarItem = ({ chat }) => {
+    const isCurrentActiveNode = chat.id === activeLevelId;
+
+    return (
+      <div
+        onClick={() => setActiveChatId(chat.id)}
+        className={`flex items-center gap-3 p-4 cursor-pointer transition-colors border-b border-white/5 ${activeChatId === chat.id ? "bg-white/10" : "hover:bg-white/5"}`}
+      >
+        <div className="relative shrink-0">
+          <img
+            src={chat.avatar}
+            className="w-12 h-12 rounded-xl bg-neutral-900 object-cover border border-white/10 p-1"
+            alt={chat.name}
+          />
+          {isCurrentActiveNode && (
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-black rounded-full flex items-center justify-center">
+              <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+            </div>
           )}
-          {chat.lastMessage}
-        </p>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-baseline mb-1">
+            <h3
+              className={`font-bold text-sm truncate ${isCurrentActiveNode ? "text-green-400" : "text-neutral-200"}`}
+            >
+              {chat.name}
+            </h3>
+            <span className="text-[10px] text-neutral-500">
+              {chat.lastTime}
+            </span>
+          </div>
+          <p
+            className={`text-xs truncate ${chat.isTyping ? "text-green-500 font-medium italic" : "text-neutral-400"}`}
+          >
+            {chat.isTyping ? (
+              "Typing..."
+            ) : (
+              <>
+                {chat.messages[chat.messages.length - 1]?.sender === "me" && (
+                  <span className="text-neutral-500">You: </span>
+                )}
+                {chat.lastMessage}
+              </>
+            )}
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="h-full bg-[#121212] text-white flex font-sans overflow-hidden animate-in fade-in duration-300">
@@ -99,7 +230,7 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
       >
         <div className="p-4 bg-neutral-900 border-b border-white/5 flex justify-between items-center shrink-0 h-16">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm shadow-lg shadow-blue-900/20">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-sm shadow-[0_0_15px_rgba(37,99,235,0.4)]">
               S
             </div>
             <span className="font-bold text-lg tracking-wide">Signal</span>
@@ -146,14 +277,18 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
                 </button>
                 <img
                   src={activeChat.avatar}
-                  className="w-9 h-9 rounded-full bg-neutral-800 object-cover border border-white/5"
+                  className="w-9 h-9 rounded-xl bg-neutral-800 object-cover border border-white/5 p-0.5"
                 />
                 <div>
-                  <h3 className="text-sm font-bold text-white">
+                  <h3
+                    className={`text-sm font-bold flex items-center gap-2 ${activeChat.id === activeLevelId ? "text-green-400" : "text-white"}`}
+                  >
                     {activeChat.name}
                   </h3>
-                  <div className="flex items-center gap-1.5 text-[10px] text-green-500 font-medium">
-                    <Lock size={9} strokeWidth={3} /> {activeChat.status}
+                  <div
+                    className={`flex items-center gap-1.5 text-[10px] font-medium tracking-widest uppercase ${activeChat.id === activeLevelId ? "text-green-500" : "text-neutral-500"}`}
+                  >
+                    <Shield size={10} /> {activeChat.status}
                   </div>
                 </div>
               </div>
@@ -167,10 +302,6 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
                   className="hover:text-white cursor-not-allowed opacity-50 transition-colors"
                 />
                 <div className="border-l border-white/10 h-6 mx-1 md:block hidden"></div>
-                <MoreVertical
-                  size={20}
-                  className="hover:text-white cursor-pointer transition-colors"
-                />
                 <button
                   onClick={onClose}
                   className="hidden md:block hover:text-red-400 font-bold ml-2 transition-colors"
@@ -180,53 +311,96 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0a0a0a] relative custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#0a0a0a] relative custom-scrollbar pb-6">
               <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
 
               <div className="flex justify-center my-6">
-                <div className="bg-yellow-500/10 text-yellow-500 px-4 py-1.5 rounded-lg border border-yellow-500/20 shadow-sm flex items-center gap-2 max-w-[90%] sm:max-w-fit">
+                <div className="bg-blue-500/10 text-blue-400 px-4 py-1.5 rounded-lg border border-blue-500/20 shadow-sm flex items-center gap-2 max-w-[90%] sm:max-w-fit">
                   <Lock size={12} className="shrink-0" />
                   <span className="text-[10px] sm:text-xs text-center leading-tight">
-                    Messages are end-to-end encrypted. No one outside of this
-                    chat, not even Signal, can read them.
+                    Mission thread established. Communications are End-to-End
+                    Encrypted.
                   </span>
                 </div>
               </div>
 
               {activeChat.messages.map((msg, idx) => {
                 const isMe = msg.sender === "me";
-                // VISUAL BARRIER LOGIC: Show a date pill if it's the first message or if the date changed
-                const showDateBarrier =
-                  idx === 0 || activeChat.messages[idx - 1].date !== msg.date;
+                const senderInfo = msg.sender || {
+                  name: "SYSTEM",
+                  avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=SYSTEM`,
+                };
+                const showSenderInfo =
+                  !isMe &&
+                  (idx === 0 ||
+                    activeChat.messages[idx - 1].sender?.name !==
+                      msg.sender?.name);
 
                 return (
-                  <div key={idx} className="flex flex-col relative z-10">
-                    {/* VISUAL DATE/TIME BARRIER */}
-                    {showDateBarrier && (
-                      <div className="flex justify-center my-4">
-                        <span className="text-[10px] font-bold tracking-wider text-neutral-500 bg-neutral-900 border border-white/5 px-3 py-1 rounded-full shadow-sm uppercase">
-                          {msg.date || "Archive"}
+                  <div
+                    key={idx}
+                    className={`flex flex-col relative z-10 ${isMe ? "items-end" : "items-start"}`}
+                  >
+                    {showSenderInfo && (
+                      <div className="flex items-center gap-2 mt-4 mb-1 ml-1 animate-in fade-in">
+                        <img
+                          src={senderInfo.avatar}
+                          className="w-5 h-5 rounded-full bg-neutral-800 border border-white/10"
+                          alt={senderInfo.name}
+                        />
+                        <span className="text-[10px] font-bold tracking-widest uppercase text-neutral-400">
+                          {senderInfo.name}
                         </span>
                       </div>
                     )}
-
                     <div
-                      className={`flex ${isMe ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 duration-300`}
+                      className={`flex ${isMe ? "justify-end" : "justify-start"} animate-in slide-in-from-bottom-2 duration-300 w-full`}
                     >
                       <div
-                        className={`max-w-[85%] sm:max-w-[70%] p-3 rounded-2xl text-sm shadow-md leading-relaxed ${isMe ? "bg-green-700 text-white rounded-br-none" : "bg-neutral-800 text-neutral-100 rounded-bl-none border border-white/5"}`}
+                        className={`max-w-[85%] sm:max-w-[70%] p-3 rounded-2xl text-sm shadow-md leading-relaxed ${isMe ? "bg-blue-600 text-white rounded-br-none mt-1" : "bg-neutral-800 text-neutral-100 rounded-bl-none border border-white/5 mt-0.5 ml-8"}`}
                       >
                         {msg.text}
                         <div
-                          className={`text-[9px] mt-1 text-right font-medium opacity-70 ${isMe ? "text-green-100" : "text-neutral-400"}`}
+                          className={`text-[9px] mt-1 text-right font-medium opacity-70 ${isMe ? "text-blue-200" : "text-neutral-500"}`}
                         >
-                          {msg.time}
+                          {msg.time} {msg.date && `• ${msg.date}`}
                         </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
+
+              {/* THE TYPING INDICATOR BUBBLE */}
+              {activeChat.isTyping && (
+                <div className="flex flex-col relative z-10 items-start">
+                  <div className="flex items-center gap-2 mt-4 mb-1 ml-1 animate-in fade-in">
+                    <div className="w-5 h-5 rounded-full bg-neutral-800 border border-white/10 flex items-center justify-center text-[8px] font-bold text-neutral-500">
+                      ?
+                    </div>
+                    <span className="text-[10px] font-bold tracking-widest uppercase text-neutral-500">
+                      Incoming Transmission...
+                    </span>
+                  </div>
+                  <div className="flex justify-start animate-in slide-in-from-bottom-2 duration-300 w-full mb-2">
+                    <div className="bg-neutral-800 border border-white/5 rounded-2xl rounded-bl-none px-4 py-3.5 shadow-md flex items-center gap-1.5 w-fit mt-0.5 ml-8">
+                      <div
+                        className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      ></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      ></div>
+                      <div
+                        className="w-1.5 h-1.5 bg-neutral-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={bottomRef} />
             </div>
 
@@ -236,7 +410,7 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
                   <span className="text-xl leading-none font-light">+</span>
                 </div>
               </button>
-              <div className="flex-1 bg-neutral-800 rounded-full px-4 py-2.5 flex items-center gap-3 border border-transparent focus-within:border-white/10 transition-colors">
+              <div className="flex-1 bg-neutral-800 rounded-full px-4 py-2.5 flex items-center gap-3 border border-transparent">
                 <input
                   type="text"
                   disabled
@@ -259,18 +433,15 @@ export default function Messenger({ onClose, messages = [], markAsRead }) {
           </>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-neutral-600 space-y-4 p-8 select-none">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-neutral-800/50 flex items-center justify-center border border-white/5">
-                <Lock size={40} className="text-neutral-700" />
-              </div>
+            <div className="w-24 h-24 rounded-full bg-neutral-800/50 flex items-center justify-center border border-white/5">
+              <Shield size={40} className="text-neutral-700" />
             </div>
             <div className="text-center space-y-2">
               <h3 className="text-xl font-bold text-neutral-300 tracking-tight">
                 Ph0enix Signal
               </h3>
               <p className="text-sm text-neutral-500 max-w-xs mx-auto leading-relaxed">
-                Send and receive encrypted messages from anywhere in the
-                network.
+                Encrypted Mission Threads. Select a node to view intercepts.
               </p>
             </div>
           </div>

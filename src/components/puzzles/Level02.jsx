@@ -69,10 +69,16 @@ export default function Level02() {
             {/* THE PUZZLE ELEMENT */}
             <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm relative group">
               <div className="h-32 bg-[#0a0a0a] flex items-center justify-center p-4">
-                {/* The flag is here, text color matches background color exactly */}
-                <span className="text-[#0a0a0a] font-mono text-sm select-text selection:bg-blue-500 selection:text-white break-all text-center">
-                  {flag}
-                </span>
+                <div className="text-[#0a0a0a] font-mono text-sm select-text selection:bg-blue-500 selection:text-white text-center flex flex-wrap justify-center">
+                  {flag.split("").map((char, index) => (
+                    <span
+                      key={index}
+                      className="inline-block hover:text-[#0b0b0b] transition-colors duration-1000"
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </div>
               </div>
               <div className="p-4 bg-white flex justify-between items-center">
                 <div>

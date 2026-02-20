@@ -52,14 +52,12 @@ export default function Desktop() {
   useEffect(() => {
     async function fetchProgress() {
       if (user) {
-        // Fetch Solves
         const { data: solvedData } = await supabase
           .from("solved_puzzles")
           .select("puzzle_id")
           .eq("user_id", user.id);
         if (solvedData) setSolvedIds(solvedData.map((r) => r.puzzle_id));
 
-        // Fetch Skips
         const { data: skippedData } = await supabase
           .from("skipped_puzzles")
           .select("puzzle_id")
@@ -93,9 +91,7 @@ export default function Desktop() {
       name: "Signal",
       icon: MessageSquare,
       color: "text-blue-500",
-      component: (props) => (
-        <Messenger {...props} messages={messages} markAsRead={markAsRead} />
-      ),
+      component: Messenger,
     },
     {
       id: "gallery",
@@ -123,29 +119,14 @@ export default function Desktop() {
       name: "Mission",
       icon: Target,
       color: "text-red-500",
-      component: (props) => (
-        <MissionControl
-          {...props}
-          solvedIds={solvedIds}
-          skippedIds={skippedIds}
-          progressionIds={progressionIds}
-        />
-      ),
+      component: MissionControl,
     },
     {
       id: "darkmarket",
       name: "Market",
       icon: ShoppingCart,
       color: "text-neutral-500",
-      component: (props) => (
-        <DarkMarket
-          {...props}
-          solvedIds={solvedIds}
-          skippedIds={skippedIds}
-          setSkippedIds={setSkippedIds}
-          progressionIds={progressionIds}
-        />
-      ),
+      component: DarkMarket,
     },
     {
       id: "settings",
@@ -313,6 +294,7 @@ export default function Desktop() {
           </div>
         </>
       )}
+
       {/* Active App Window */}
       {activeApp && (
         <div
@@ -325,7 +307,7 @@ export default function Desktop() {
           }
         `}
         >
-          {/* PASS ALL GLOBAL STATE DOWN TO APPS */}
+          {/* global state is injected */}
           <activeApp.component
             onClose={() => setActiveApp(null)}
             solvedIds={solvedIds}
@@ -333,6 +315,8 @@ export default function Desktop() {
             skippedIds={skippedIds}
             setSkippedIds={setSkippedIds}
             progressionIds={progressionIds}
+            messages={messages}
+            markAsRead={markAsRead}
           />
         </div>
       )}
