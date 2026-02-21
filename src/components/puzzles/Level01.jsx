@@ -1,11 +1,9 @@
 import { useRef, useEffect } from "react";
-import { useFlag } from "../../hooks/useFlag";
 import { SYSTEM_DATA } from "../../config/build.prop";
 import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
-export default function Level01() {
+export default function Level01({ flag }) {
   const containerRef = useRef(null);
-  const flag = useFlag("level-01");
 
   useEffect(() => {
     if (containerRef.current) {

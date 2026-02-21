@@ -7,29 +7,28 @@ import Level03 from "../components/puzzles/Level03";
 import Level04 from "../components/puzzles/Level04";
 import Level05 from "../components/puzzles/Level05";
 import Level06 from "../components/puzzles/Level06";
+import Level12 from "../components/puzzles/Level12";
 
 import { level07Commands } from "../components/puzzles/Level07";
 import { level08Commands } from "../components/puzzles/Level08";
 import { level09Commands } from "../components/puzzles/Level09";
 import { level10Commands } from "../components/puzzles/Level10";
 
-import Level12 from "../components/puzzles/Level12";
-
-// Map IDs to their Code counterpart
+// Map Semantic IDs to their Code counterpart
 const CODE_MAP = {
-  "level-00": {}, // empty object for tutorial
-  "level-01": { component: Level01 },
-  "level-02": { component: Level02 },
-  "level-03": { component: Level03 },
-  "level-04": { component: Level04 },
-  "level-05": { component: Level05 },
-  "level-06": { component: Level06 },
-  "level-07": { commands: level07Commands },
-  "level-08": { commands: level08Commands },
-  "level-09": { commands: level09Commands },
-  "level-10": { commands: level10Commands },
-  "level-11": {},
-  "level-12": { component: Level12 },
+  "first-blood": {},
+  "html-source": { component: Level01 },
+  "design-v2": { component: Level02 },
+  "system-logs": { component: Level03 },
+  "secure-transmission": { component: Level04 },
+  "corrupted-display": { component: Level05 },
+  "session-manager": { component: Level06 },
+  "hidden-services": { commands: level07Commands },
+  "data-recovery": { commands: level08Commands },
+  weaponization: { commands: level09Commands },
+  "privilege-escalation": { commands: level10Commands },
+  "digital-footprint": {},
+  "visual-forensics": { component: Level12 },
 };
 
 // Merge them automatically

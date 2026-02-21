@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import SecurityShell from "../apps/Security";
-import { getLevelFlag } from "../../utils/game";
+import { getLevelFlag, isLevelUnlocked } from "../../utils/game";
 
 function FeedCanvas({ filterStyle, flag }) {
   const canvasRef = useRef(null);
@@ -78,9 +78,9 @@ function FeedCanvas({ filterStyle, flag }) {
   );
 }
 
-export default function Level12App({ onClose, solvedIds = [] }) {
-  const isUnlocked = solvedIds.includes("level-11");
-  const RAW_FLAG = getLevelFlag("level-12");
+export default function Level12App({ onClose, progressionIds = [] }) {
+  const isUnlocked = isLevelUnlocked("visual-forensics", progressionIds);
+  const RAW_FLAG = getLevelFlag("visual-forensics");
 
   const renderFeed = (filterStyle) => {
     return <FeedCanvas filterStyle={filterStyle} flag={RAW_FLAG} />;

@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { useFlag } from "../../hooks/useFlag";
 import { Activity, Server } from "lucide-react";
 
-export default function Level03() {
-  const flag = useFlag("level-03");
+export default function Level03({ flag }) {
   const [logs, setLogs] = useState([]);
   const [kernelPanic, setKernelPanic] = useState(false); // [NEW] The intentional crash trigger
 

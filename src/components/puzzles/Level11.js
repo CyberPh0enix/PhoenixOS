@@ -8,7 +8,7 @@ export const getPuzzleImage = () => ({
   date: "Feb 19, 2026",
   device: "Ph0enix-Admin-Device",
   lens: "24mm f/1.8",
-  getLocation: () => getLevelFlag("level-11"),
+  getLocation: () => getLevelFlag("digital-footprint"),
 
   // SVG of a Server Rack
   src: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">

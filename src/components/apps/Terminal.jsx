@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { PUZZLE_CONFIG } from "../../data/puzzles";
 import { SYSTEM_COMMANDS } from "../../data/commands";
@@ -27,15 +27,14 @@ export default function Terminal({
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
-  const prevSolvedIds = useRef(solvedIds);
 
   if (crash) throw new Error("MANUAL_KERNEL_PANIC_INITIATED_BY_USER");
 
   const registry = useMemo(() => {
     const reg = { ...SYSTEM_COMMANDS, heist: heistCommand };
-    PUZZLE_CONFIG.forEach((puzzle) => {
-      if (puzzle.commands) {
-        Object.entries(puzzle.commands).forEach(([cmdName, cmdDef]) => {
+    PUZZLE_CONFIG.forEach((mod) => {
+      if (mod.commands) {
+        Object.entries(mod.commands).forEach(([cmdName, cmdDef]) => {
           reg[cmdName] = cmdDef;
         });
       }
@@ -43,95 +42,19 @@ export default function Terminal({
     return reg;
   }, []);
 
-  // Encapsulated boot sequence so we can call it initially AND after a delay
-  const initTerminal = useCallback(
-    (currentSolvedIds, isReboot = false) => {
-      const nextPuzzle = PUZZLE_CONFIG.find(
-        (p) => !currentSolvedIds.includes(p.id),
-      );
-      const startupLogs = [];
-
-      if (isReboot) {
-        startupLogs.push({
-          type: "info",
-          content: "========================================",
-        });
-        startupLogs.push({
-          type: "system",
-          content: "UPLINK ESTABLISHED. LOADING NEXT NODE...",
-        });
-      } else {
-        startupLogs.push({
-          type: "system",
-          content: `${SYSTEM_DATA.osName} Kernel ${SYSTEM_DATA.version}`,
-        });
-        startupLogs.push({
-          type: "system",
-          content: `Connected as: ${user?.email || "guest"}`,
-        });
-        startupLogs.push({
-          type: "info",
-          content: "----------------------------------------",
-        });
-      }
-
-      if (!nextPuzzle) {
-        startupLogs.push({
-          type: "success",
-          content: "ALL SYSTEMS SECURE. No active threats.",
-        });
-      } else if (nextPuzzle.type === "terminal") {
-        startupLogs.push({
-          type: "success",
-          content: `ACTIVE MISSION: ${nextPuzzle.title}`,
-        });
-        startupLogs.push({
-          type: "info",
-          content: `OBJECTIVE: ${nextPuzzle.desc}`,
-        });
-        if (nextPuzzle.onStart) {
-          startupLogs.push({
-            type: "warning",
-            content: `>> ${nextPuzzle.onStart}`,
-          });
-        }
-      } else {
-        startupLogs.push({
-          type: "warning",
-          content: `ALERT: Threat detected in ${nextPuzzle.title}. Terminal: RESTRICTED MODE`,
-        });
-      }
-
-      startupLogs.push({
-        type: "info",
-        content: "----------------------------------------",
-      });
-
-      if (isReboot) {
-        setHistory((prev) => [...prev, ...startupLogs]);
-      } else {
-        setHistory(startupLogs);
-      }
-    },
-    [user],
-  );
-
-  // Initial Load
   useEffect(() => {
-    initTerminal(solvedIds, false);
-  }, []);
-
-  // Smart Transition Effect
-  useEffect(() => {
-    if (solvedIds.length > prevSolvedIds.current.length) {
-      const timer = setTimeout(() => {
-        initTerminal(solvedIds, true);
-      }, 2500);
-
-      prevSolvedIds.current = solvedIds;
-      return () => clearTimeout(timer);
-    }
-  }, [solvedIds, initTerminal]);
+    const startupLogs = [
+      {
+        type: "system",
+        content: `${SYSTEM_DATA.osName} Kernel ${SYSTEM_DATA.version}`,
+      },
+      { type: "system", content: `Connected as: ${user?.email || "guest"}` },
+      { type: "info", content: "----------------------------------------" },
+      { type: "info", content: `Type 'help' for available commands.` },
+      { type: "info", content: "----------------------------------------" },
+    ];
+    setHistory(startupLogs);
+  }, [user]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -156,7 +79,7 @@ export default function Terminal({
 
       const args = cmdStr.split(" ");
       const commandName = args[0].toLowerCase();
-      const lockStatus = checkCommandLock(commandName, solvedIds);
+      const lockStatus = checkCommandLock(commandName, progressionIds);
 
       if (lockStatus.isLocked) {
         addToHistory(

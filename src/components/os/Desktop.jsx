@@ -68,7 +68,10 @@ export default function Desktop() {
     fetchProgress();
   }, [user]);
 
-  const { messages, unreadCount, markAsRead } = useHintSystem(solvedIds);
+  const { messages, unreadCount, markAsRead } = useHintSystem(
+    solvedIds,
+    skippedIds,
+  );
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const apps = [

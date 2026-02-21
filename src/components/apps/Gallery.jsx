@@ -7,6 +7,7 @@ import {
   Camera,
   Grid,
 } from "lucide-react";
+import { isLevelUnlocked } from "../../utils/game";
 import { getPuzzleImage } from "../puzzles/Level11";
 
 const DUMMY_IMAGES = [
@@ -67,11 +68,14 @@ const DUMMY_IMAGES = [
   },
 ];
 
-export default function Gallery({ onClose, solvedIds = [] }) {
+export default function Gallery({ onClose, progressionIds = [] }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
 
-  const isLevel11Unlocked = solvedIds.includes("level-10");
+  const isLevel11Unlocked = isLevelUnlocked(
+    "digital-footprint",
+    progressionIds,
+  );
 
   const images = useMemo(() => {
     const list = [...DUMMY_IMAGES];

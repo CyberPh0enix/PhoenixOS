@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PUZZLE_CONFIG } from "../../data/puzzles";
+import { getLevelFlag } from "../../utils/game";
 import { SYSTEM_DATA } from "../../config/build.prop";
 import {
   RefreshCw,
@@ -173,21 +174,31 @@ export default function Browser({ onClose, progressionIds = [] }) {
 
   const renderContent = () => {
     if (url === "tor://market.onion") return <DarkMarket />;
-    if (url === HOME_URL || url === BASE_URL || url === `${BASE_URL}/`)
-      return (
-        <IntranetHome onNavigate={navigate} browserPuzzles={browserPuzzles} />
+    if (url === HOME_URL || url === BASE_URL || url === `${BASE_URL}/`) {
+      const browserConfig = PUZZLE_CONFIG.filter(
+        (p) => p.type === "browser" && p.path,
       );
+      return (
+        <IntranetHome onNavigate={navigate} browserPuzzles={browserConfig} />
+      );
+    }
 
-    const puzzle = browserPuzzles.find((p) => url === `${BASE_URL}/${p.path}`);
+    const levelData = PUZZLE_CONFIG.find(
+      (p) => url === `${BASE_URL}/${p.path}`,
+    );
+    if (!levelData) return <Error404 url={url} />;
 
-    if (!puzzle) return <Error404 url={url} />;
-
-    // [FIX] Checks progressionIds (includes skips) instead of solvedIds
-    if (puzzle.requires && !progressionIds.includes(puzzle.requires))
+    if (levelData.requires && !progressionIds.includes(levelData.requires)) {
       return <Error403 url={url} />;
+    }
 
-    const Component = puzzle.component;
-    return <Component />;
+    const Component = levelData.component;
+    if (!Component) return <Error404 url={url} />;
+
+    const puzzleFlag = getLevelFlag(levelData.id);
+
+    // Inject the flag directly into your decoupled UI!
+    return <Component flag={puzzleFlag} />;
   };
 
   return (

@@ -1,9 +1,6 @@
-import { useFlag } from "../../hooks/useFlag";
 import { SYSTEM_DATA } from "../../config/build.prop";
 
-export default function Level02() {
-  const flag = useFlag("level-02");
-
+export default function Level02({ flag }) {
   const colors = [
     { name: "Primary Blue", hex: "#2563EB", text: "text-white" },
     { name: "Secondary Slate", hex: "#475569", text: "text-white" },

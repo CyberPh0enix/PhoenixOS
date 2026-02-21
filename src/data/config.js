@@ -1,7 +1,7 @@
 const LEVEL_CONFIG = [
   // --- TUTORIAL ---
   {
-    id: "level-00",
+    id: "first-blood",
     type: "terminal",
     title: "First Blood",
     desc: "Terminal Uplink Initialization",
@@ -32,7 +32,7 @@ const LEVEL_CONFIG = [
 
   // --- BROWSER LEVELS ---
   {
-    id: "level-01",
+    id: "html-source",
     type: "browser",
     title: "Dev Team Notes",
     desc: "HTML Source Code Inspection",
@@ -62,7 +62,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-02",
+    id: "design-v2",
     type: "browser",
     title: "Design System V2",
     desc: "Contrast & Selection Tests",
@@ -85,7 +85,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-03",
+    id: "system-logs",
     type: "browser",
     title: "System Logs",
     desc: "Console Debugging",
@@ -108,7 +108,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-04",
+    id: "secure-transmission",
     type: "browser",
     title: "Secure Transmission",
     desc: "Encoding Analysis",
@@ -132,7 +132,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-05",
+    id: "corrupted-display",
     type: "browser",
     title: "Corrupted Display",
     desc: "CSS Layer Analysis",
@@ -155,7 +155,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-06",
+    id: "session-manager",
     type: "browser",
     title: "Session Manager",
     desc: "Storage Inspection",
@@ -186,7 +186,7 @@ const LEVEL_CONFIG = [
 
   // --- TERMINAL LEVELS ---
   {
-    id: "level-07",
+    id: "hidden-services",
     type: "terminal",
     title: "Hidden Services",
     desc: "Network Port Analysis",
@@ -216,7 +216,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-08",
+    id: "data-recovery",
     type: "terminal",
     title: "Data Recovery",
     desc: "File System Forensics",
@@ -247,7 +247,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-09",
+    id: "weaponization",
     type: "terminal",
     title: "Weaponization",
     desc: "File Permissions",
@@ -277,7 +277,7 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-10",
+    id: "privilege-escalation",
     type: "terminal",
     title: "Privilege Escalation",
     desc: "Identity Spoofing & TTY Bypass",
@@ -307,9 +307,10 @@ const LEVEL_CONFIG = [
       },
     ],
   },
+
   // --- OTHERS ---
   {
-    id: "level-11",
+    id: "digital-footprint",
     type: "osint",
     title: "Digital Footprint",
     desc: "EXIF Metadata Extraction",
@@ -339,8 +340,8 @@ const LEVEL_CONFIG = [
     ],
   },
   {
-    id: "level-12",
-    type: "osint",
+    id: "visual-forensics",
+    type: "cctv",
     title: "Visual Forensics",
     desc: "Steganography & Filtering",
     color: "bg-red-900 text-red-400",

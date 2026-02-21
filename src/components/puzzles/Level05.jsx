@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useFlag } from "../../hooks/useFlag";
 import { Key, AlertTriangle, ShieldCheck } from "lucide-react";
 
-export default function Level05() {
+export default function Level05({ flag }) {
   const [revealed, setRevealed] = useState(false);
-  const flag = useFlag("level-05");
 
   if (revealed) {
     throw new Error(`CRITICAL_FAILURE: ${flag}`);

@@ -3,12 +3,14 @@ import { LEVEL_CONFIG } from "../data/config";
 import { PERSONAS } from "../data/personas";
 import { SensoryEngine } from "../utils/sensory";
 
-export function useHintSystem(solvedIds = []) {
+export function useHintSystem(solvedIds = [], skippedIds = []) {
   const [messages, setMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const isInitialMount = useRef(true);
 
-  // 1. Load Persistent History on Mount
+  const initialized = useRef(false);
+  const processedIds = useRef(new Set());
+
+  // Initial Load from LocalStorage
   useEffect(() => {
     const savedMessages = JSON.parse(
       localStorage.getItem("ph0enix_msg_history") || "[]",
@@ -18,21 +20,23 @@ export function useHintSystem(solvedIds = []) {
     );
 
     setMessages(savedMessages);
+    savedMessages.forEach((m) => processedIds.current.add(m.id));
 
-    // Calculate unread count ignoring already read IDs
     const initialUnread = savedMessages.filter(
       (m) => !readIds.includes(m.id),
     ).length;
     setUnreadCount(initialUnread);
 
     setTimeout(() => {
-      isInitialMount.current = false;
-    }, 1500);
+      initialized.current = true;
+    }, 1000);
   }, []);
 
-  // 2. The Live Hint Tracker
+  // Live Hint Tracker
   useEffect(() => {
-    const currentLevel = LEVEL_CONFIG.find((l) => !solvedIds.includes(l.id));
+    const currentLevel = LEVEL_CONFIG.find(
+      (l) => !solvedIds.includes(l.id) && !skippedIds.includes(l.id),
+    );
     const currentLevelId = currentLevel ? currentLevel.id : "endgame";
 
     const storageKey = `start_${currentLevelId}`;
@@ -64,23 +68,30 @@ export function useHintSystem(solvedIds = []) {
       setMessages((prevMessages) => {
         let hasNewMessages = false;
         const newMessages = [...prevMessages];
-        const existingIds = new Set(prevMessages.map((m) => m.id));
 
         LEVEL_CONFIG.forEach((level) => {
-          // A. Check Past Levels
-          if (solvedIds.includes(level.id) && level.hints) {
+          // A. If a level is solved OR SKIPPED, immediately dump all its hints
+          if (
+            (solvedIds.includes(level.id) || skippedIds.includes(level.id)) &&
+            level.hints
+          ) {
             level.hints.forEach((hint) => {
-              if (!existingIds.has(hint.id)) {
+              if (!processedIds.current.has(hint.id)) {
                 newMessages.push(hydrateHint(hint, level.id));
+                processedIds.current.add(hint.id);
                 hasNewMessages = true;
               }
             });
           }
-          // B. Check Current Level
+          // B. Check Current Level timer
           else if (level.id === currentLevelId && level.hints) {
             level.hints.forEach((hint) => {
-              if (hint.delay <= elapsedSeconds && !existingIds.has(hint.id)) {
+              if (
+                hint.delay <= elapsedSeconds &&
+                !processedIds.current.has(hint.id)
+              ) {
                 newMessages.push(hydrateHint(hint, level.id));
+                processedIds.current.add(hint.id);
                 hasNewMessages = true;
               }
             });
@@ -92,7 +103,6 @@ export function useHintSystem(solvedIds = []) {
             "ph0enix_msg_history",
             JSON.stringify(newMessages),
           );
-
           const readIds = JSON.parse(
             localStorage.getItem("ph0enix_msg_read") || "[]",
           );
@@ -101,10 +111,7 @@ export function useHintSystem(solvedIds = []) {
           ).length;
           setUnreadCount(unread);
 
-          if (!isInitialMount.current) {
-            SensoryEngine.triggerAlert();
-          }
-
+          if (initialized.current) SensoryEngine.triggerAlert();
           return newMessages;
         }
         return prevMessages;
@@ -112,7 +119,7 @@ export function useHintSystem(solvedIds = []) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [solvedIds]);
+  }, [solvedIds, skippedIds]);
 
   const markAsRead = () => {
     setMessages((prev) => {
