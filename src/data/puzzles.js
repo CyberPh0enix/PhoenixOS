@@ -12,25 +12,25 @@ import VisualForensics from "../components/puzzles/VisualForensics";
 // COMMANDS
 import { hiddenServicesCommands } from "../components/puzzles/HiddenServices";
 import { dataRecoveryCommands } from "../components/puzzles/DataRecovery";
-import { weaponizationCommands } from "../components/puzzles/Weaponization";
-import { privilegeEscalationCommands } from "../components/puzzles/PrivilegeEscalation";
 
 // Map Semantic IDs to their Code counterpart
 const CODE_MAP = {
   "first-blood": {},
   "html-source": { component: HtmlSource },
   "design-v2": { component: DesignV2 },
+  "corrupted-display": { component: CorruptedDisplay },
   "system-logs": { component: SystemLogs },
   "secure-transmission": { component: SecureTransmission },
-  "corrupted-display": { component: CorruptedDisplay },
-  "session-manager": { component: SessionManager },
+  "digital-footprint": {},
   "visual-forensics": { component: VisualForensics },
+  "session-manager": { component: SessionManager },
 
   "hidden-services": { commands: hiddenServicesCommands },
   "data-recovery": { commands: dataRecoveryCommands },
-  weaponization: { commands: weaponizationCommands },
-  "privilege-escalation": { commands: privilegeEscalationCommands },
-  "digital-footprint": {},
+
+  // Future Boss Placeholders
+  "multi-step-1": {},
+  "multi-step-2": {},
 };
 
 // Merge them automatically
