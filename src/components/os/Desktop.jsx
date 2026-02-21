@@ -81,6 +81,8 @@ export default function Desktop() {
       icon: TerminalIcon,
       color: "text-green-500",
       component: Terminal,
+      showOnDesktop: true,
+      showInTaskbar: true,
     },
     {
       id: "browser",
@@ -88,6 +90,8 @@ export default function Desktop() {
       icon: Globe,
       color: "text-orange-500",
       component: Browser,
+      showOnDesktop: true,
+      showInTaskbar: true,
     },
     {
       id: "messenger",
@@ -95,6 +99,8 @@ export default function Desktop() {
       icon: MessageSquare,
       color: "text-blue-500",
       component: Messenger,
+      showOnDesktop: true,
+      showInTaskbar: true,
     },
     {
       id: "gallery",
@@ -102,6 +108,8 @@ export default function Desktop() {
       icon: Image,
       color: "text-yellow-400",
       component: Gallery,
+      showOnDesktop: true,
+      showInTaskbar: false,
     },
     {
       id: "security",
@@ -109,6 +117,8 @@ export default function Desktop() {
       icon: Video,
       color: "text-red-500",
       component: VisualForensicsApp,
+      showOnDesktop: true,
+      showInTaskbar: false,
     },
     {
       id: "leaderboard",
@@ -116,6 +126,8 @@ export default function Desktop() {
       icon: Trophy,
       color: "text-yellow-500",
       component: Leaderboard,
+      showOnDesktop: true,
+      showInTaskbar: false,
     },
     {
       id: "missioncontrol",
@@ -123,6 +135,8 @@ export default function Desktop() {
       icon: Target,
       color: "text-red-500",
       component: MissionControl,
+      showOnDesktop: false,
+      showInTaskbar: true,
     },
     {
       id: "darkmarket",
@@ -130,6 +144,8 @@ export default function Desktop() {
       icon: ShoppingCart,
       color: "text-neutral-500",
       component: DarkMarket,
+      showOnDesktop: true,
+      showInTaskbar: false,
     },
     {
       id: "settings",
@@ -137,8 +153,13 @@ export default function Desktop() {
       icon: SettingsIcon,
       color: "text-gray-400",
       component: Settings,
+      showOnDesktop: false,
+      showInTaskbar: true,
     },
   ];
+
+  const desktopApps = apps.filter((app) => app.showOnDesktop);
+  const taskbarApps = apps.filter((app) => app.showInTaskbar);
 
   useDevExploitSequence(activeApp, () => {
     addToast("ROOT PRIVILEGES GRANTED. COMMAND 'heist' UNLOCKED.", "error");
@@ -174,7 +195,7 @@ export default function Desktop() {
 
           {!activeApp && (
             <div className="absolute top-12 left-6 bottom-24 w-auto flex flex-col flex-wrap gap-4 z-10 content-start">
-              {apps.map((app) => (
+              {desktopApps.map((app) => (
                 <button
                   key={app.id}
                   onClick={() => setActiveApp(app)}
@@ -199,7 +220,7 @@ export default function Desktop() {
           )}
 
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 h-16 px-4 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl flex items-center gap-3 z-50 shadow-2xl">
-            {apps.map((app) => (
+            {taskbarApps.map((app) => (
               <button
                 key={app.id}
                 onClick={() => setActiveApp(app)}
