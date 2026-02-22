@@ -1,14 +1,18 @@
 # Ph0enixOS
 
-## Architecture
+## Tech Stack
 
-- **Frontend:** React (Vite) + TailwindCSS
-- **Backend:** Supabase (Auth + Database + RPC Functions)
-- **State Management:** React Context + Hooks
-- **Anti-Cheat:** Server-side SQL validation
+- **Frontend:** React (Vite) & TailwindCSS
+- **Backend:** Supabase
+- **Anti-Cheat:** SQL Row Level Security (RLS)
 
-## Setup
+---
 
-1. Clone repo
-2. `pnpm install`
-3. `pnpm run dev`
+## 🚀 Quick Setup Guide
+
+```bash
+git clone <repository-url>
+cd <repo>
+pnpm install
+pnpm run dev
+```
