@@ -254,14 +254,12 @@ export const SYSTEM_COMMANDS = {
             const isPostBypass =
               skippedIds && skippedIds.includes(matchedLevel.id);
             const baseReward = matchedLevel.reward || 100;
+            const baseCredits = Math.max(1, Math.floor(baseReward * 0.1));
 
-            // Post-bypass yields only 25% of the dynamic reward
+            const rewardXP = isPostBypass ? 0 : baseReward;
             const rewardCR = isPostBypass
-              ? Math.floor(baseReward * 0.25)
-              : baseReward;
-            const rewardXP = isPostBypass
-              ? Math.floor(baseReward * 0.25)
-              : baseReward;
+              ? Math.max(1, Math.floor(baseCredits * 0.25))
+              : baseCredits;
 
             if (profile) {
               const newCredits = (profile.credits || 0) + rewardCR;
@@ -355,6 +353,20 @@ export const SYSTEM_COMMANDS = {
       addToHistory("success", "ENCODED OUTPUT:");
       addToHistory("user", hex);
       addToHistory("info", "(Add this to 'encryptedFlag')");
+    },
+  },
+
+  env: {
+    description: "Print environment variables",
+    execute: (args, { addToHistory }) => {
+      addToHistory("info", "USER=operative");
+      addToHistory("info", "SHELL=/bin/bash");
+      addToHistory("info", "SESSION_ID=8f4a-9b1c-4e22");
+      addToHistory("info", "PH0ENIX_FLAG=flag{environment_variables_exposed}");
+      addToHistory(
+        "info",
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin",
+      );
     },
   },
 };

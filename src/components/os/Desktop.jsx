@@ -127,7 +127,7 @@ export default function Desktop() {
       color: "text-blue-400",
       component: Mail,
       showOnDesktop: true,
-      showInTaskbar: false,
+      showInTaskbar: true,
     },
     {
       id: "gallery",

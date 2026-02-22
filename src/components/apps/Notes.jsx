@@ -12,6 +12,14 @@ const STATIC_NOTES = [
     date: "SYSTEM",
   },
   {
+    id: "sys-02",
+    title: "ENCRYPTED_MEMO.txt",
+    content:
+      "The Architect hides data in plain sight.\n\nCipher: ROT13\nPayload: synt{pelcgbtencul_101}\n\nDo not let the novices find this.",
+    isReadOnly: true,
+    date: "SYSTEM",
+  },
+  {
     id: "lore-01",
     title: "admin_ramblings.log",
     content:
