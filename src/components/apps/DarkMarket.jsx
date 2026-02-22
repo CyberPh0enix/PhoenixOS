@@ -14,6 +14,7 @@ import {
   Key,
 } from "lucide-react";
 import { LEVEL_CONFIG } from "../../data/config";
+import { getLevelFlag } from "../../utils/game";
 import CountUp from "../ui/CountUp";
 
 export default function DarkMarket({
@@ -27,10 +28,12 @@ export default function DarkMarket({
   const [purchaseStatus, setPurchaseStatus] = useState(null);
   const [confirmItem, setConfirmItem] = useState(null);
   const [hasB64, setHasB64] = useState(false);
+  const [hasRot13, setHasRot13] = useState(false);
   const [hasPandora, setHasPandora] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("ph0enix_b64_unlocked")) setHasB64(true);
+    if (localStorage.getItem("ph0enix_rot13_unlocked")) setHasRot13(true);
     if (localStorage.getItem("ph0enix_pandora_key")) setHasPandora(true);
   }, []);
 
@@ -43,6 +46,20 @@ export default function DarkMarket({
 
   const dynamicSkipCost = activeLevel ? activeLevel.skipCost || 50 : 0;
 
+  // Helper for Dual-Layer encoding
+  const rot13 = (str) => {
+    return str.replace(/[a-zA-Z]/g, (char) => {
+      const base = char <= "Z" ? 65 : 97;
+      return String.fromCharCode(
+        ((char.charCodeAt(0) - base + 13) % 26) + base,
+      );
+    });
+  };
+
+  const rawMarketFlag = getLevelFlag("market-cache");
+  const hiddenDualFlag =
+    rawMarketFlag !== "ERROR_NO_FLAG" ? btoa(rot13(rawMarketFlag)) : "";
+
   let MARKET_ITEMS = [
     {
       id: "b64_module",
@@ -54,11 +71,38 @@ export default function DarkMarket({
       isBought: hasB64,
     },
     {
+      id: "rot13_module",
+      title: "Caesar Shift Engine (ROT-13)",
+      desc: "Installs the 'rot13' utility into your terminal. Automatically shifts alphabetical cipher texts.",
+      price: 20,
+      icon: TerminalSquare,
+      color: "text-green-500",
+      isBought: hasRot13,
+    },
+    {
       id: "ddos_botnet",
       title: "Mirai Botnet Rental (1hr)",
       desc: "Route a localized DDoS attack to blind internal logging systems. Requires Syndicate Reputation.",
       price: 1500,
       icon: Zap,
+      color: "text-purple-500",
+      outOfStock: true,
+    },
+    {
+      id: "ghost_cache",
+      title: "Corrupted Cache Log",
+      desc: (
+        <span>
+          Recovered memory fragments. The sector appears empty to the naked eye.
+          Read between the lines:
+          {/* hidden via CSS */}
+          <span className="text-transparent selection:bg-purple-500 selection:text-white select-text cursor-text ml-1">
+            {hiddenDualFlag}
+          </span>
+        </span>
+      ),
+      price: 420,
+      icon: Ghost,
       color: "text-purple-500",
       outOfStock: true,
     },
@@ -123,6 +167,9 @@ export default function DarkMarket({
     } else if (item.id === "b64_module") {
       localStorage.setItem("ph0enix_b64_unlocked", "true");
       setHasB64(true);
+    } else if (item.id === "rot13_module") {
+      localStorage.setItem("ph0enix_rot13_unlocked", "true");
+      setHasRot13(true);
     } else if (item.id === "pandora_key") {
       localStorage.setItem("ph0enix_pandora_key", "true");
       setHasPandora(true);

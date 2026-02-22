@@ -338,12 +338,46 @@ export const SYSTEM_COMMANDS = {
     },
   },
 
+  rot13: {
+    description: "Decode a ROT-13 cipher string",
+    execute: async (args, { addToHistory }) => {
+      // 1. Verify Purchase
+      if (!localStorage.getItem("ph0enix_rot13_unlocked")) {
+        addToHistory(
+          "error",
+          "PERMISSION DENIED: 'rot13' module not installed.",
+        );
+        addToHistory(
+          "info",
+          "Hint: Network utilities can be acquired from the Dark Market.",
+        );
+        return;
+      }
+
+      if (args.length < 2) {
+        addToHistory("error", "Usage: rot13 <string>");
+        return;
+      }
+
+      // 2. Execute ROT-13 Shift
+      const input = args.slice(1).join(" ");
+      const decoded = input.replace(/[a-zA-Z]/g, (char) => {
+        const base = char <= "Z" ? 65 : 97;
+        return String.fromCharCode(
+          ((char.charCodeAt(0) - base + 13) % 26) + base,
+        );
+      });
+
+      addToHistory("success", `PAYLOAD DECODED: ${decoded}`);
+    },
+  },
+
   encode: {
     hidden: true,
     description: "Encode string to Hex",
     execute: (args, { addToHistory }) => {
       if (args.length < 2) {
-        addToHistory("error", "Usage: dev_encode <string>");
+        addToHistory("error", "Usage: encode <string>");
         return;
       }
       // Rejoin args in case flag has spaces
@@ -353,20 +387,6 @@ export const SYSTEM_COMMANDS = {
       addToHistory("success", "ENCODED OUTPUT:");
       addToHistory("user", hex);
       addToHistory("info", "(Add this to 'encryptedFlag')");
-    },
-  },
-
-  env: {
-    description: "Print environment variables",
-    execute: (args, { addToHistory }) => {
-      addToHistory("info", "USER=operative");
-      addToHistory("info", "SHELL=/bin/bash");
-      addToHistory("info", "SESSION_ID=8f4a-9b1c-4e22");
-      addToHistory("info", "PH0ENIX_FLAG=flag{environment_variables_exposed}");
-      addToHistory(
-        "info",
-        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin",
-      );
     },
   },
 };

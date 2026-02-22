@@ -15,7 +15,7 @@ const STATIC_NOTES = [
     id: "sys-02",
     title: "ENCRYPTED_MEMO.txt",
     content:
-      "The Architect hides data in plain sight.\n\nCipher: ROT13\nPayload: synt{pelcgbtencul_101}\n\nDo not let the novices find this.",
+      "--- ARCHITECT DIRECTIVE ---\n\nAll legacy credentials must now use standard shift ciphers to prevent plaintext scraping.\n\nAlgorithm: Caesar Shift (ROT-13)\n\nIf you need the cryptography flag, process the following payload:\n\nPAYLOAD_BLOCK:\n\nsynt{pelcgbtencul_101}",
     isReadOnly: true,
     date: "SYSTEM",
   },

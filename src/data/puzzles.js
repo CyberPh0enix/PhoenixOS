@@ -13,9 +13,15 @@ import VisualForensics from "../components/puzzles/VisualForensics";
 import { hiddenServicesCommands } from "../components/puzzles/HiddenServices";
 import { dataRecoveryCommands } from "../components/puzzles/DataRecovery";
 
+// Others
+import { injectEnvPuzzle } from "../components/puzzles/EnvDump";
+injectEnvPuzzle();
+
 import ProjectPandora, {
   pandoraCommands,
+  injectPandoraFiles,
 } from "../components/puzzles/ProjectPandora";
+injectPandoraFiles();
 
 // Map Semantic IDs to their Code counterpart
 const CODE_MAP = {
