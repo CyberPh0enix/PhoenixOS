@@ -24,6 +24,9 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
+import { LEVEL_CONFIG } from "../../data/config";
+import GameComplete from "./GameComplete";
+
 // Apps
 import Terminal from "../apps/Terminal";
 import Messenger from "../apps/Messenger";
@@ -77,6 +80,8 @@ export default function Desktop() {
     skippedIds,
   );
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isGameComplete =
+    progressionIds && progressionIds.length >= LEVEL_CONFIG.length;
 
   const apps = [
     {
@@ -194,6 +199,11 @@ export default function Desktop() {
       className="fixed inset-0 w-full h-full bg-black text-white font-sans overflow-hidden"
       style={{ background: WALLPAPER_mVjq, backgroundSize: "cover" }}
     >
+      {/* The Victory Overlay! */}
+      {isGameComplete && (
+        <GameComplete solvedIds={solvedIds} skippedIds={skippedIds} />
+      )}
+
       {isDesktop && (
         <>
           <div className="absolute top-0 left-0 w-full h-8 bg-black/40 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 z-50 select-none">
