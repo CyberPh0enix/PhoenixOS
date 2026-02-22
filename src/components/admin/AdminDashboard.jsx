@@ -20,7 +20,8 @@ export default function AdminDashboard() {
 
   const handleAuth = (e) => {
     e.preventDefault();
-    if (passcode === import.meta.env.VITE_ADMIN_PASSCODE) {
+    const envPass = import.meta.env.VITE_ADMIN_PASSCODE;
+    if (passcode === envPass) {
       setIsAuthenticated(true);
     } else {
       setAuthError(true);
