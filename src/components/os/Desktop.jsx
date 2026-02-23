@@ -47,13 +47,14 @@ export default function Desktop() {
   const { addToast } = useToast();
   const [activeApp, setActiveApp] = useState(null);
   const [showLogout, setShowLogout] = useState(false);
+  const [hideGameComplete, setHideGameComplete] = useState(false);
 
   // PROGRESS STATE
   const [solvedIds, setSolvedIds] = useState([]);
   const [skippedIds, setSkippedIds] = useState([]);
 
   // Combined array for unlocking logic
-  const progressionIds = [...solvedIds, ...skippedIds];
+  const progressionIds = Array.from(new Set([...solvedIds, ...skippedIds]));
 
   // Fetch progress securely from Supabase
   useEffect(() => {
@@ -200,8 +201,12 @@ export default function Desktop() {
       style={{ background: WALLPAPER_mVjq, backgroundSize: "cover" }}
     >
       {/* The Victory Overlay! */}
-      {isGameComplete && (
-        <GameComplete solvedIds={solvedIds} skippedIds={skippedIds} />
+      {isGameComplete && !hideGameComplete && (
+        <GameComplete
+          solvedIds={solvedIds}
+          skippedIds={skippedIds}
+          onClose={() => setHideGameComplete(true)}
+        />
       )}
 
       {isDesktop && (

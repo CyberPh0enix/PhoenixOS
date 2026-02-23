@@ -14,7 +14,7 @@ import CountUp from "../ui/CountUp";
 import { SYSTEM_DATA } from "../../config/build.prop";
 import { LEVEL_CONFIG } from "../../data/config";
 
-export default function GameComplete({ solvedIds = [], skippedIds = [] }) {
+export default function GameComplete({ solvedIds = [], skippedIds = [], onClose }) {
   const { profile } = useAuth();
   const [showContent, setShowContent] = useState(false);
 
@@ -26,8 +26,12 @@ export default function GameComplete({ solvedIds = [], skippedIds = [] }) {
 
   // --- STAT CALCULATIONS ---
   const totalLevels = LEVEL_CONFIG.length;
-  const solvedCount = solvedIds.length;
-  const skippedCount = skippedIds.length;
+  // [FIX] Ensure accurate stats if a player skipped and then solved later
+  const uniqueSolvedIds = [...new Set(solvedIds)];
+  // Only count as pure skipped if they NEVER solved it
+  const pureSkippedIds = [...new Set(skippedIds)].filter(id => !uniqueSolvedIds.includes(id));
+  const solvedCount = uniqueSolvedIds.length;
+  const skippedCount = pureSkippedIds.length;
   // Prevent division by zero just in case
   const accuracy =
     totalLevels > 0 ? Math.round((solvedCount / totalLevels) * 100) : 0;
@@ -185,6 +189,15 @@ export default function GameComplete({ solvedIds = [], skippedIds = [] }) {
                 AWAITING DEBRIEF FROM ADMIN...
               </span>
             </div>
+            {/* [NEW] Return to Desktop Button */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className={`px-8 py-3 bg-neutral-900 border border-neutral-700 transition-all font-bold tracking-widest text-[10px] sm:text-xs uppercase rounded flex items-center justify-center gap-2 hover:bg-neutral-800 shadow-lg mb-10`}
+              >
+                RETURN TO OS
+              </button>
+            )}
           </div>
         )}
       </div>
