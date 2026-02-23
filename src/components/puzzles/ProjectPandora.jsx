@@ -10,7 +10,6 @@ import {
 import ObfuscatedText from "../ui/ObfuscatedText";
 import { useToast } from "../../context/ToastContext";
 import { SensoryEngine } from "../../utils/sensory";
-import { supabase } from "../../lib/supabase";
 import { createFile } from "../../data/filesystem";
 
 // --- INJECT THE LORE PUZZLE INTO THE FILESYSTEM ---
@@ -308,11 +307,12 @@ export const pandoraCommands = {
 
         if (profile) {
           const penalizedScore = Math.max(0, (profile.score || 0) - 1500);
-          await supabase
-            .from("profiles")
-            .update({ score: penalizedScore })
-            .eq("id", profile.id);
-          if (refreshProfile) await refreshProfile(profile.id);
+          const updatedProfile = { ...profile, score: penalizedScore };
+          localStorage.setItem(
+            "ph0enix_profile",
+            JSON.stringify(updatedProfile),
+          );
+          if (refreshProfile) await refreshProfile();
           addToHistory(
             "warning",
             `LEADERBOARD SCORE DROPPED TO: ${penalizedScore} PTS`,

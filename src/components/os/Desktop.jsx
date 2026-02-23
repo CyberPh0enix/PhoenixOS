@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useHintSystem } from "../../hooks/useHintSystem";
 import { SYSTEM_DATA, WALLPAPER_mVjq } from "../../config/build.prop";
@@ -36,7 +35,6 @@ import Mail from "../apps/Mail";
 import VisualForensicsApp from "../puzzles/VisualForensics";
 import Browser from "../apps/Browser";
 import Settings from "../apps/Settings";
-import Leaderboard from "../apps/Leaderboard";
 import MissionControl from "../apps/MissionControl";
 import DarkMarket from "../apps/DarkMarket";
 import LogoutConfirmation from "./LogoutConfirm";
@@ -56,25 +54,26 @@ export default function Desktop() {
   // Combined array for unlocking logic
   const progressionIds = Array.from(new Set([...solvedIds, ...skippedIds]));
 
-  // Fetch progress securely from Supabase
+  // Fetch progress securely from LocalStorage
   useEffect(() => {
-    async function fetchProgress() {
-      if (user) {
-        const { data: solvedData } = await supabase
-          .from("solved_puzzles")
-          .select("puzzle_id")
-          .eq("user_id", user.id);
-        if (solvedData) setSolvedIds(solvedData.map((r) => r.puzzle_id));
-
-        const { data: skippedData } = await supabase
-          .from("skipped_puzzles")
-          .select("puzzle_id")
-          .eq("user_id", user.id);
-        if (skippedData) setSkippedIds(skippedData.map((r) => r.puzzle_id));
-      }
-    }
-    fetchProgress();
+    const localSolved = JSON.parse(
+      localStorage.getItem("ph0enix_solved") || "[]",
+    );
+    const localSkipped = JSON.parse(
+      localStorage.getItem("ph0enix_skipped") || "[]",
+    );
+    setSolvedIds(localSolved);
+    setSkippedIds(localSkipped);
   }, [user]);
+
+  // Keep LocalStorage synced with state changes
+  useEffect(() => {
+    localStorage.setItem("ph0enix_solved", JSON.stringify(solvedIds));
+  }, [solvedIds]);
+
+  useEffect(() => {
+    localStorage.setItem("ph0enix_skipped", JSON.stringify(skippedIds));
+  }, [skippedIds]);
 
   const { messages, unreadCount, markAsRead } = useHintSystem(
     solvedIds,
@@ -145,15 +144,6 @@ export default function Desktop() {
       icon: Video,
       color: "text-red-500",
       component: VisualForensicsApp,
-      showOnDesktop: true,
-      showInTaskbar: false,
-    },
-    {
-      id: "leaderboard",
-      name: "Rankings",
-      icon: Trophy,
-      color: "text-yellow-500",
-      component: Leaderboard,
       showOnDesktop: true,
       showInTaskbar: false,
     },

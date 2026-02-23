@@ -1,4 +1,3 @@
-import { supabase } from "../lib/supabase";
 import { FILE_SYSTEM, FILE_CONTENTS } from "./filesystem";
 import { encodeSecret, decodeSecret } from "../utils/crypto";
 import { LEVEL_CONFIG } from "./config"; // Import your config
@@ -239,68 +238,60 @@ export const SYSTEM_COMMANDS = {
         }
 
         if (user) {
-          const { error } = await supabase.from("solved_puzzles").insert([
-            {
-              user_id: user.id,
-              puzzle_id: matchedLevel.id,
-              solved_at: new Date().toISOString(),
-            },
-          ]);
+          const isPostBypass =
+            skippedIds && skippedIds.includes(matchedLevel.id);
+          const baseReward = matchedLevel.reward || 100;
+          const baseCredits = Math.max(1, Math.floor(baseReward * 0.1));
 
-          if (error && error.code !== "23505") {
-            addToHistory("error", `Database Error: ${error.message}`);
+          const rewardXP = isPostBypass ? 0 : baseReward;
+          const rewardCR = isPostBypass
+            ? Math.max(1, Math.floor(baseCredits * 0.25))
+            : baseCredits;
+
+          if (profile) {
+            const newCredits = (profile.credits || 0) + rewardCR;
+            const newScore = (profile.score || 0) + rewardXP;
+            const updatedProfile = {
+              ...profile,
+              credits: newCredits,
+              score: newScore,
+            };
+
+            localStorage.setItem(
+              "ph0enix_profile",
+              JSON.stringify(updatedProfile),
+            );
+            if (refreshProfile) await refreshProfile();
+          }
+
+          SensoryEngine.playSuccess();
+          if (isPostBypass) {
+            addToHistory(
+              "success",
+              `FLAG ACCEPTED. Sector was previously bypassed.`,
+              { animate: "decrypt" },
+            );
+            addToHistory(
+              "warning",
+              `PENALTY APPLIED: +0 XP / +${rewardCR} cR Awarded.`,
+              { animate: "decrypt" },
+            );
           } else {
-            // [NEW] Smart Dynamic Rewards Engine!
-            const isPostBypass =
-              skippedIds && skippedIds.includes(matchedLevel.id);
-            const baseReward = matchedLevel.reward || 100;
-            const baseCredits = Math.max(1, Math.floor(baseReward * 0.1));
-
-            const rewardXP = isPostBypass ? 0 : baseReward;
-            const rewardCR = isPostBypass
-              ? Math.max(1, Math.floor(baseCredits * 0.25))
-              : baseCredits;
-
-            if (profile) {
-              const newCredits = (profile.credits || 0) + rewardCR;
-              const newScore = (profile.score || 0) + rewardXP;
-              await supabase
-                .from("profiles")
-                .update({ credits: newCredits, score: newScore })
-                .eq("id", user.id);
-              if (refreshProfile) await refreshProfile(user.id);
-            }
-
-            SensoryEngine.playSuccess();
             addToHistory(
               "success",
               `CORRECT! ${matchedLevel.title} Completed.`,
               { animate: "decrypt" },
             );
-
-            if (isPostBypass) {
-              addToHistory(
-                "warning",
-                `PENALTY APPLIED: Partial Reward (+${rewardCR} cR / +${rewardXP} XP) due to prior bypass.`,
-                { animate: "decrypt" },
-              );
-            } else {
-              addToHistory(
-                "info",
-                `REWARD: +${rewardCR} cR / +${rewardXP} XP`,
-                { animate: "decrypt" },
-              );
-            }
-
-            if (setSolvedIds)
-              setSolvedIds((prev) => [...prev, matchedLevel.id]);
+            addToHistory("info", `REWARD: +${rewardXP} XP / +${rewardCR} cR`, {
+              animate: "decrypt",
+            });
           }
-        } else {
-          SensoryEngine.playSuccess();
-          addToHistory("success", `CORRECT! (Guest Mode)`, {
-            animate: "decrypt",
-          });
-          if (setSolvedIds) setSolvedIds((prev) => [...prev, matchedLevel.id]);
+
+          if (setSolvedIds) {
+            const newSolved = [...solvedIds, matchedLevel.id];
+            setSolvedIds(newSolved);
+            localStorage.setItem("ph0enix_solved", JSON.stringify(newSolved));
+          }
         }
       } else {
         SensoryEngine.playError();

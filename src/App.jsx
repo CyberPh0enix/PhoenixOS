@@ -1,18 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "./context/AuthContext";
 import LockScreen from "./components/os/LockScreen";
 import Desktop from "./components/os/Desktop";
-import AdminDashboard from "./components/admin/AdminDashboard";
+import SystemCrash from "./components/os/SystemCrash";
 
 export default function App() {
   const { user, loading } = useAuth();
-  const [unlocked, setUnlocked] = useState(false);
-  const [isAdminRoute, setIsAdminRoute] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("admin") === "true") setIsAdminRoute(true);
-  }, []);
+  const [crash, setCrash] = useState(false);
 
   if (loading) {
     return (
@@ -27,10 +21,13 @@ export default function App() {
     );
   }
 
-  if (isAdminRoute) return <AdminDashboard />;
+  // Handle kernel panic easter egg
+  if (crash) {
+    return <SystemCrash onReboot={() => window.location.reload()} />;
+  }
 
-  if (!user || !unlocked) {
-    return <LockScreen onUnlock={() => setUnlocked(true)} />;
+  if (!user) {
+    return <LockScreen />;
   }
 
   return <Desktop />;

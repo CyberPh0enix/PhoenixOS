@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
 import {
   ShieldAlert,
   TerminalSquare,
@@ -130,9 +129,8 @@ export default function DarkMarket({
     });
   }
 
-  // Handle the actual transaction
   const executePurchase = async (item) => {
-    setConfirmItem(null); // Close modal
+    setConfirmItem(null);
 
     if (profile.credits < item.price) {
       setPurchaseStatus({
@@ -143,27 +141,18 @@ export default function DarkMarket({
       return;
     }
 
+    // Offline Credit Deduction
     if (item.price > 0) {
       const newBalance = profile.credits - item.price;
-      const { error: creditError } = await supabase
-        .from("profiles")
-        .update({ credits: newBalance })
-        .eq("id", profile.id);
-      if (creditError) {
-        setPurchaseStatus({
-          type: "error",
-          msg: "NETWORK ERROR. TRANSACTION FAILED.",
-        });
-        return;
-      }
-      await refreshProfile(profile.id);
+      const updatedProfile = { ...profile, credits: newBalance };
+      localStorage.setItem("ph0enix_profile", JSON.stringify(updatedProfile));
+      await refreshProfile();
     }
 
     if (item.id === "skip_level" && activeLevel) {
-      const { error: skipError } = await supabase
-        .from("skipped_puzzles")
-        .insert([{ user_id: profile.id, puzzle_id: activeLevel.id }]);
-      if (!skipError) setSkippedIds([...skippedIds, activeLevel.id]);
+      const newSkipped = [...skippedIds, activeLevel.id];
+      setSkippedIds(newSkipped);
+      localStorage.setItem("ph0enix_skipped", JSON.stringify(newSkipped));
     } else if (item.id === "b64_module") {
       localStorage.setItem("ph0enix_b64_unlocked", "true");
       setHasB64(true);
